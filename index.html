@@ -335,7 +335,9 @@
   </div>
   <div class="sub3" data-panel3="hobong">
     <form id="fHob" class="card" autocomplete="off">
-      <div class="doc-head"><h2>호봉획정표 <span class="muted small">[별지 제16호 서식]</span></h2><span class="muted small">경력환산율표(지침 p.82~84) · 1년=12월, 1월=30일</span></div>
+      <div class="doc-head"><h2>호봉획정표 <span class="muted small">[별지 제16호 서식]</span></h2>
+        <div><button type="button" class="btn ghost" id="hobLoadBtn">기존 호봉획정표 불러오기(.hwpx)</button><input type="file" id="hobLoad" accept=".hwpx" hidden></div></div>
+      <p class="muted small" style="margin-top:-6px">이 도우미로 만든 호봉획정표(한글에서 고쳐 저장한 hwpx 포함)를 불러오면 입력 화면이 채워집니다. 파일은 이 컴퓨터 안에서만 읽습니다. 경력환산율표(지침 p.82~84) · 1년=12월, 1월=30일</p>
       <div class="row4">
         <label>호봉획정사유<select name="reason"><option>계약제 교원 임용</option><option>호봉재획정</option><option>초임 호봉획정</option><option>호봉정정</option></select></label>
         <label>(1)소속<input name="org" placeholder="학교 정보의 학교명"></label>

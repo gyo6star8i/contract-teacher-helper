@@ -45,6 +45,98 @@
     tr.querySelector('.del button').addEventListener('click', () => tr.remove());
   }
   addRow({ kind: 'military', content: '군경력' }); addRow({ kind: 'teacher' });
+
+  /* ---- 기존 호봉획정표(hwpx) 불러오기: 표 내용을 읽어 입력 화면 복원 ---- */
+  $('#hobLoadBtn').addEventListener('click', () => $('#hobLoad').click());
+  $('#hobLoad').addEventListener('change', async e => {
+    const file = e.target.files[0]; e.target.value = '';
+    if (!file) return;
+    if (!/\.hwpx$/i.test(file.name)) { toast('hwpx 파일만 불러올 수 있습니다. 한글에서 "다른 이름으로 저장 → hwpx"로 저장해 주세요.'); return; }
+    try {
+      const zip = await JSZip.loadAsync(await file.arrayBuffer());
+      const names = Object.keys(zip.files).filter(n => /^Contents\/section\d+\.xml$/.test(n)).sort();
+      const tables = []; let full = '';
+      for (const n of names) {
+        const doc = new DOMParser().parseFromString(await zip.file(n).async('string'), 'application/xml');
+        full += [...doc.getElementsByTagNameNS('*', 't')].map(t => t.textContent).join('\n');
+        [...doc.getElementsByTagNameNS('*', 'tbl')].forEach(tb => tables.push([...tb.getElementsByTagNameNS('*', 'tr')].map(tr =>
+          [...tr.getElementsByTagNameNS('*', 'tc')].map(tc => [...tc.getElementsByTagNameNS('*', 'p')].map(p =>
+            [...p.getElementsByTagNameNS('*', 't')].map(t => t.textContent).join('')).join('\n').trim()))));
+      }
+      const parsed = parseHobong(tables);
+      if (parsed) { parsed.limit14 = /호봉상한제 적용 대상/.test(full); const rm = full.match(/호봉획정사유\s*:\s*([^\n]+)/); if (rm) parsed.reason = rm[1].trim(); }
+      if (!parsed) { toast('호봉획정표 양식을 찾지 못했습니다. 이 도우미로 만든 호봉획정표인지 확인하세요.'); return; }
+      fillHob(parsed);
+      fHob.requestSubmit();
+      toast(`불러왔습니다: 경력 ${parsed.rows.length}건. 고칠 부분을 수정한 뒤 다시 내려받으세요.`);
+    } catch (err) { console.error(err); toast('파일을 읽지 못했습니다: ' + err.message); }
+  });
+  const isoOf = t => { const m = String(t || '').match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/); return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : ''; };
+  const ymdOf = t => { const m = String(t || '').match(/(\d+)년\s*(\d+)월\s*(\d+)일/); return m ? { y: +m[1], m: +m[2], d: +m[3] } : null; };
+  function guessKind(content, rate, note) {
+    const hm = String(note).match(/주당\s*([\d.]+)h/);
+    if (hm) return { kind: 'gangsa', hours: hm[1] };
+    if (/군|병역|복무/.test(content) && rate === 100) return { kind: 'military' };
+    if (/휴직/.test(content) && rate === 100) return { kind: 'leaveCounted' };
+    if (/대학원|석사|박사/.test(content) && rate === 100) return { kind: 'gradSchool' };
+    const byRate = { 100: 'teacher', 80: 'teacher80', 50: 'privateNoReport', 40: 'company', 30: 'companyPersonal' }[rate];
+    if (byRate && (rate === 100 || rate === 80 ? /초|중|고|학교|유치원|기간제|교원|교사/.test(content) : true)) return { kind: rate === 50 && !/사립/.test(content) ? 'custom' : byRate, rate: rate === 50 && !/사립/.test(content) ? rate : '' };
+    return { kind: 'custom', rate };
+  }
+  function parseHobong(tables) {
+    const info = tables.find(t => t[0] && t[0][0] && t[0][0].includes('(1)소속'));
+    const car = tables.find(t => t[0] && t[0].some(c => c.includes('(7)경력기간')));
+    const sum = tables.find(t => t[0] && t[0].some(c => c.includes('(14)')));
+    if (!car) return null;
+    const o = { rows: [] };
+    if (info) {
+      o.org = info[0][1] || ''; o.proposed = (info[1] || [])[2] || ''; o.position = (info[1] || [])[3] || '';
+      const r3 = info[2] || [], r4 = info[3] || [];
+      o.curGrade = (r3[4] || '').replace(/[^\d]/g, '');
+      const eduCell = (r3[2] || '') + ' ' + (r4[1] || r4[2] || '');
+      const em = eduCell.match(/\(([^()]*\([^()]*\)[^()]*)\)\s*$/m) || eduCell.match(/\(([^()]+)\)\s*$/m);
+      o.eduKind = em ? em[1] : '';
+      o.eduName = eduCell.replace(/\s*\([^()]*(\([^()]*\))?[^()]*\)\s*$/m, '').trim();
+    }
+    car.slice(2).forEach(r => {
+      const s = isoOf(r[0]), e = isoOf(r[1]);
+      if (!s || !e || /계/.test(r[0])) return;
+      const rate = Number(String(r[6] || '').replace(/[^\d.]/g, '')) || 0;
+      const g = guessKind(r[2] || '', rate, r[10] || '');
+      o.rows.push(Object.assign({ start: s, end: e, content: r[2] || '', note: (r[10] || '').replace(/주당\s*[\d.]+h\/\d+h/, '').trim() }, g));
+    });
+    if (sum && sum[1]) {
+      const v = sum[1];
+      o.add = Number(String(v[1]).replace(/[^\d-]/g, '')) || 0;
+      o.grade = Number(String(v[3]).replace(/[^\d]/g, '')) || 0;
+      o.date = isoOf(v[4]);
+      o.p18 = Number(String(v[5]).replace(/[^\d]/g, '')) || 0;
+    }
+    const pos = tables.find(t => t[0] && t[0][0] && t[0][0].includes('작성자 직위'));
+    if (pos) { o.writerPos = (pos[0][0].split(':')[1] || '').trim(); o.checkerPos = ((pos[1] || [])[0] || '').split(':')[1]?.trim() || ''; }
+    return o;
+  }
+  function fillHob(o) {
+    const set = (k, v) => { if (v !== undefined && v !== null && v !== '' && fHob[k]) fHob[k].value = v; };
+    set('org', o.org); set('proposed', o.proposed); set('position', o.position); set('curGrade', o.curGrade); set('date', o.date);
+    fHob.limit14.checked = !!o.limit14;
+    if (o.reason && [...fHob.reason.options].some(x => x.value === o.reason)) fHob.reason.value = o.reason;
+    set('writerPos', o.writerPos); set('checkerPos', o.checkerPos); set('eduName', o.eduName);
+    const ei = Rules3.EDU.findIndex(([n]) => n === o.eduKind);
+    if (ei >= 0) { fHob.edu.value = ei; syncEdu(); }
+    // 가감년수 = 학력 가감 + 기타 가감
+    if (o.add !== undefined) fHob.adj.value = o.add - (Number(fHob.eduAdj.value) || 0);
+    // 기산호봉 = 사정호봉 − (18) 경력년수 (호봉상한제면 14 − (18))
+    if (o.grade && o.p18 !== undefined) {
+      const base = o.grade - o.p18;   // 호봉상한제여도 (18) = 14 − 기산호봉으로 기록되므로 같은 식
+      const ci = Rules3.CERT.findIndex(([n, b]) => b === base && (!o.proposed || o.proposed.replace(/\s/g, '').includes(n.replace(/정교사|교사/, ''))));
+      const ci2 = ci >= 0 ? ci : Rules3.CERT.findIndex(([, b]) => b === base);
+      if (ci2 >= 0) fHob.cert.value = ci2;
+      fHob.base.value = base;
+    }
+    hobBody.innerHTML = '';
+    (o.rows.length ? o.rows : [{}]).forEach(r => addRow(r));
+  }
   $('#hobAdd').addEventListener('click', () => addRow());
   function readHob() {
     const rows = $$('tr', hobBody).map(tr => { const o = {}; $$('input,select', tr).forEach(el => o[el.name] = el.type === 'checkbox' ? el.checked : el.value); return o; });
