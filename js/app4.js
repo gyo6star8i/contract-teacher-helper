@@ -14,22 +14,28 @@
     catch (e) { console.error(e); toast('파일을 만들지 못했습니다: ' + e.message); }
   }
 
-  /* =================== 호봉 획정 =================== */
+  /* =================== 호봉 획정([별지 제16호 서식]) =================== */
   const fHob = $('#fHob'), hobBody = $('#hobRows tbody');
-  fHob.startDate.value = todayIso;
-  fHob.cert.addEventListener('change', () => { if (fHob.cert.value) fHob.base.value = fHob.cert.value; });
+  fHob.date.value = todayIso;
+  fHob.cert.innerHTML = Rules3.CERT.map(([n, b], i) => `<option value="${i}" ${n === '2급정교사' ? 'selected' : ''}>${n} (${b}호봉)</option>`).join('');
+  fHob.edu.innerHTML = Rules3.EDU.map(([n, a], i) => `<option value="${i}" ${n === '교대졸(4년)' ? 'selected' : ''}>${n} (${a > 0 ? '+' : ''}${a})</option>`).join('');
+  const syncCert = () => { fHob.base.value = Rules3.CERT[fHob.cert.value][1]; };
+  const syncEdu = () => { fHob.eduAdj.value = Rules3.EDU[fHob.edu.value][1]; };
+  fHob.cert.addEventListener('change', syncCert); fHob.edu.addEventListener('change', syncEdu);
+  syncCert(); syncEdu();
   const kindOpts = Rules3.CAREER.map(c => `<option value="${c.k}">${h(c.label)}${c.rate != null ? ` (${c.rate}%)` : ''}</option>`).join('');
   function addRow(v = {}) {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td><select name="kind">${kindOpts}</select></td><td><input type="date" name="start"></td><td><input type="date" name="end"></td>
-      <td><input type="number" name="rate" min="0" max="100" style="width:70px"></td><td><input type="number" name="hours" min="0" step="0.5" style="width:70px" disabled></td>
-      <td><input type="checkbox" name="mismatch" disabled></td><td><input name="note" style="min-width:100px"></td><td class="del"><button type="button" title="삭제">✕</button></td>`;
+      <td><input name="content" style="min-width:120px" placeholder="예: ○○초(기간제)"></td>
+      <td><input type="number" name="rate" min="0" max="100" style="width:70px"></td>
+      <td><input type="number" name="hours" min="0" step="0.5" style="width:64px" disabled></td><td><input type="number" name="totalHours" min="0" style="width:72px" disabled></td>
+      <td><input type="checkbox" name="mismatch" disabled></td><td><input name="note" style="min-width:90px"></td><td class="del"><button type="button" title="삭제">✕</button></td>`;
     hobBody.appendChild(tr);
     const sel = tr.querySelector('[name=kind]');
     const sync = () => {
-      const c = Rules3.CAREER.find(x => x.k === sel.value);
-      const gangsa = sel.value === 'gangsa';
-      tr.querySelector('[name=hours]').disabled = !gangsa; tr.querySelector('[name=mismatch]').disabled = !gangsa;
+      const c = Rules3.CAREER.find(x => x.k === sel.value), gangsa = sel.value === 'gangsa';
+      ['hours', 'totalHours', 'mismatch'].forEach(n => tr.querySelector(`[name=${n}]`).disabled = !gangsa);
       tr.querySelector('[name=rate]').disabled = gangsa;
       tr.querySelector('[name=rate]').placeholder = c && c.rate != null ? c.rate : (sel.value === 'univLecturer' ? '50~100' : '');
     };
@@ -38,39 +44,50 @@
     sync();
     tr.querySelector('.del button').addEventListener('click', () => tr.remove());
   }
-  addRow(); addRow({ kind: 'military' });
+  addRow({ kind: 'military', content: '군경력' }); addRow({ kind: 'teacher' });
   $('#hobAdd').addEventListener('click', () => addRow());
   function readHob() {
-    const rows = $$('tr', hobBody).map(tr => {
-      const o = {}; $$('input,select', tr).forEach(el => o[el.name] = el.type === 'checkbox' ? el.checked : el.value); return o;
-    });
-    return { base: fHob.base.value, adj: fHob.adj.value, sabeom: fHob.sabeom.checked, limit14: fHob.limit14.checked, rows, startDate: fHob.startDate.value, cert: fHob.cert.options[fHob.cert.selectedIndex].text };
+    const rows = $$('tr', hobBody).map(tr => { const o = {}; $$('input,select', tr).forEach(el => o[el.name] = el.type === 'checkbox' ? el.checked : el.value); return o; });
+    const o = {}; $$('input,select', fHob).forEach(el => { if (!el.closest('#hobRows')) o[el.name] = el.type === 'checkbox' ? el.checked : el.value; });
+    o.rows = rows; o.certName = Rules3.CERT[fHob.cert.value][0]; o.eduName2 = Rules3.EDU[fHob.edu.value][0];
+    return o;
   }
   let lastHob = null;
+  function calcHob() { const inp = readHob(); lastHob = { inp, r: Rules3.hobong(inp) }; return lastHob; }
   fHob.addEventListener('submit', e => {
     e.preventDefault();
-    const inp = readHob(), r = Rules3.hobong(inp);
-    lastHob = { inp, r };
+    const { inp, r } = calcHob();
     const out = $('#hobOut'); out.classList.remove('empty');
-    out.innerHTML = `<div class="verdict"><div class="lbl">초임호봉(검토)</div><div class="big">${r.grade}호봉</div>
-      <div class="facts"><div class="fact"><div class="k">환산 경력 합계</div><div class="v">${Rules3.fmt(r.totalP)}</div></div>
-      <div class="fact"><div class="k">기산 + 가산</div><div class="v">${Number(inp.base) || 0} + ${(inp.sabeom ? 1 : 0) + (Number(inp.adj) || 0)}</div></div></div></div>` +
-      (r.rows.length ? `<div class="grid-wrap"><table class="sg"><tr><th>경력</th><th>기간</th><th>환산율</th><th>인정</th></tr>${r.rows.map(x =>
-        `<tr><td>${h(x.label)}</td><td>${Rules3.fmt(x.period)}</td><td>${x.rate}%</td><td><b>${Rules3.fmt(x.usedP)}</b></td></tr>`).join('')}</table></div>` : '') +
+    out.innerHTML = `<div class="verdict"><div class="lbl">(17) 사정호봉</div><div class="big">${r.grade}호봉${r.capped ? ' <span class="small">(호봉상한제)</span>' : ''}</div>
+      <div class="facts"><div class="fact"><div class="k">(14) 환산 총경력년수</div><div class="v">${Rules3.fmt(r.p14)}</div></div>
+      <div class="fact"><div class="k">(15) 가감년수</div><div class="v">${r.add > 0 ? '+' : ''}${r.add}년</div></div>
+      <div class="fact"><div class="k">(16) 호봉 획정 경력년수</div><div class="v">${Rules3.fmt(r.p16)}</div></div>
+      <div class="fact"><div class="k">잔여 / 차기승급일(참고)</div><div class="v">${r.rest.m}월 ${r.rest.d}일 / ${r.next ? Rules.kdate(r.next) : '-'}</div></div></div></div>` +
+      (r.rows.length ? `<div class="grid-wrap"><table class="sg"><tr><th>(8)경력내용</th><th>(9)경력년수</th><th>(10)환산율</th><th>(11)환산년수</th></tr>${r.rows.map(x =>
+        `<tr><td>${h(x.label)}</td><td>${Rules3.fmt(x.period)}</td><td>${x.rate}%</td><td><b>${Rules3.fmt(x.usedP)}</b></td></tr>`).join('')}
+        <tr><th>(13)계</th><th>${Rules3.fmt(r.rawP)}</th><th></th><th>${Rules3.fmt(r.p14)}</th></tr></table></div>` : '') +
       msgHtml(r.msgs);
   });
   $('#hobDoc').addEventListener('click', () => {
-    if (!lastHob) fHob.requestSubmit();
-    const { inp, r } = lastHob || {}; if (!r) return;
-    const rows = r.rows.map((x, i) => [String(i + 1), x.label, `${Rules.kdate(x.s)} ~\n${Rules.kdate(x.e)}`, Rules3.fmt(x.period), x.rate + '%', Rules3.fmt(x.usedP), x.note]);
+    const { inp, r } = calcHob();
+    const sab = /교대|사범/.test(inp.eduName2);
+    const eduText = `${inp.eduName ? inp.eduName + ' ' : ''}(${inp.eduName2})`;
+    const rows = r.rows.map(x => [Rules.kdate(x.s), Rules.kdate(x.e), x.label, x.period.y, x.period.m, x.period.d, x.rate + '%', x.usedP.y, x.usedP.m, x.usedP.d,
+      [x.note, x.kind === 'gangsa' ? `주당 ${x.weekly}h/${x.base}h` : ''].filter(Boolean).join(' ')].map(String));
+    while (rows.length < 6) rows.push(Array(11).fill(''));
+    const sv = schoolVars();
     make('hobong', {
-      rows: { r: rows.length ? rows : [['', '경력 없음', '', '', '', '', '']] },
+      rows: { r: rows },
       vars: {
-        startDate: kd(inp.startDate), cert: inp.cert, base: String(Number(inp.base) || 0), add: `${(inp.sabeom ? 1 : 0) + (Number(inp.adj) || 0)}년`,
-        totalP: Rules3.fmt(r.totalP), gradeText: `${r.grade}호봉` + (r.capped ? ' (14호봉 제한 적용)' : ''), rest: `${r.totalP.m}월 ${r.totalP.d}일`,
-        limitText: inp.limit14 ? '해당(퇴직연금 수령·명예퇴직·정년퇴직) — 14호봉 상한, 정근수당 근무연수 5년 인정' : '해당 없음', date: kd(todayIso),
+        reason: inp.reason, org: inp.org || sv.schoolName, cert: inp.proposed || inp.certName, position: inp.position, curGrade: inp.curGrade,
+        edu1: sab ? eduText : '', edu2: sab ? '' : eduText,
+        s9y: String(r.rawP.y), s9m: String(r.rawP.m), s9d: String(r.rawP.d), s11y: String(r.p14.y), s11m: String(r.p14.m), s11d: String(r.p14.d),
+        p14: Rules3.fmt(r.p14), p15: `${r.add > 0 ? '+' : ''}${r.add}`, p16: Rules3.fmt(r.p16), grade: `${r.grade}호봉`, date: kd(inp.date),
+        p18: `${r.capped ? 14 - (Number(inp.base) || 0) : r.p16.y}년`, rest: `${r.rest.m}월 ${r.rest.d}일`, next: r.next ? Rules.kdate(r.next) : '',
+        writerPos: inp.writerPos, checkerPos: inp.checkerPos,
+        limitText: inp.limit14 ? `※ 호봉상한제 적용 대상(연금수급자·명예퇴직·정년퇴직 교원): 14호봉 상한${r.capped ? ` → 산정 ${Number(inp.base) + r.p16.y}호봉을 14호봉으로 획정` : ''}` : '',
       },
-    }, `${(inp.startDate || todayIso).replace(/-/g, '')}_호봉 획정 검토표`);
+    }, `${(inp.date || todayIso).replace(/-/g, '')}_호봉획정표`);
   });
 
   /* =================== 근무실적 평가(서식 18) =================== */

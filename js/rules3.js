@@ -8,14 +8,30 @@
   const { D, iso, kdate, addDays, diffDays, periodEnd } = R;
 
   /* =====================================================================
-   * 2. 호봉 획정
+   * 2. 호봉 획정 ([별지 제16호 서식] 호봉획정표 방식)
+   *   - 경력기간은 년·월·일로 계산, 1년 = 12월, 1월 = 30일
+   *   - 환산년수 = 경력기간(일 환산) × 환산율, 일 미만 버림
+   *   - (14) 환산 총경력 + (15) 가감년수 = (16) 호봉 획정 경력
+   *   - (17) 사정호봉 = 기산호봉 + (16)의 년수, 나머지는 잔여기간
    * ===================================================================== */
+  // 자격별 기산호봉 (공무원보수규정 [별표 22] — 학교에서 쓰던 호봉획정표 코드표 기준)
+  const CERT = [
+    ['1급정교사', 9], ['2급정교사', 8], ['준교사', 5], ['실기교사', 5], ['특수1급정교사', 9], ['특수2급정교사', 8], ['특수준교사', 5],
+    ['1급보건교사', 9], ['2급보건교사', 8], ['1급영양교사', 9], ['2급영양교사', 8], ['사서교사', 8], ['교도교사', 9],
+    ['1급전문상담교사', 9], ['2급전문상담교사', 8],
+  ];
+  // 학력별 가감년수 (학령 기준 4년제 대학 졸업 = 0, 교대·사범대 4년 = +1)
+  const EDU = [
+    ['교대졸(4년)', 1], ['사범대졸(4년)', 1], ['대졸(4년)', 0], ['교대졸(2년)', -1], ['사범대졸(2년)', -1], ['전문대졸(3년)', -1], ['전문대졸(2년)', -2],
+    ['사범학교졸', -3], ['고졸', -4], ['고2년수료', -5], ['고1년수료', -6], ['중졸', -7],
+  ];
   const CAREER = [
     { k: 'teacher', label: '교원 경력(같은 학교급·자격)', rate: 100, ref: '환산율표 1' },
     { k: 'teacher80', label: '교원 경력(학교급·자격 불일치)', rate: 80, ref: '환산율표 1' },
     { k: 'privateNoReport', label: '사립학교 교원(임면 보고 안 됨)', rate: 50, ref: '환산율표 1' },
-    { k: 'gangsa', label: '유·초·중등 강사(주당 근무시간 비례)', rate: null, ref: '환산율표 4' },
+    { k: 'gangsa', label: '유·초·중등 강사(근무시간 비례)', rate: null, ref: '환산율표 4' },
     { k: 'military', label: '병역(현역·대체복무 등)', rate: 100, ref: '공무원보수규정 별표16' },
+    { k: 'leaveCounted', label: '휴직 등 경력 인정 기간(육아휴직 등)', rate: 100, ref: '공무원보수 업무지침' },
     { k: 'publicServant', label: '국가·지방 공무원(기능직 포함)', rate: 100, ref: '환산율표 3' },
     { k: 'gradSchool', label: '대학원 학위취득(석사 2년·박사 3년 이내)', rate: 100, ref: '환산율표 7' },
     { k: 'univLecturer', label: '대학 시간강사(주당 수업시수 기준)', rate: null, ref: '환산율표 5' },
@@ -36,21 +52,29 @@
     if (m < 0) { y--; m += 12; }
     return { y, m, d };
   }
-  const toMonths = p => p.y * 12 + p.m + p.d / 30;
-  const fromMonths = t => { const y = Math.floor(t / 12), m = Math.floor(t - y * 12), d = Math.floor((t - y * 12 - m) * 30 + 1e-6); return { y, m, d }; };
+  const toD = p => p.y * 360 + p.m * 30 + p.d;                 // 1년=360일, 1월=30일
+  const fromD = n => { n = Math.max(0, Math.floor(n)); return { y: Math.floor(n / 360), m: Math.floor((n % 360) / 30), d: n % 30 }; };
   const fmt = p => `${p.y}년 ${p.m}월 ${p.d}일`;
 
-  function careerRate(row) {
+  // 강사 주당 근무시간 기준(정규 교원): ~2004학년도 44, 2005학년도 43, 2006~2011학년도 42, 2012학년도~ 40
+  function baseHoursFor(d) {
+    if (!d) return 40;
+    const sy = d.getMonth() + 1 >= 3 ? d.getFullYear() : d.getFullYear() - 1;   // 학년도
+    return sy <= 2004 ? 44 : sy === 2005 ? 43 : sy <= 2011 ? 42 : 40;
+  }
+  function careerRate(row, s, e) {
     const c = CAREER.find(x => x.k === row.kind) || CAREER[CAREER.length - 1];
     if (row.kind === 'gangsa') {
-      const h = Number(row.hours) || 0, base = Number(row.baseHours) || 40;
-      let rate = h < 12 ? 30 : Math.min(100, Math.round(h / base * 100));
-      if (row.mismatch) rate = Math.round(rate * 0.8);
-      return Math.max(30, rate);
+      const base = baseHoursFor(s);
+      let weekly = Number(row.hours) || 0;
+      if (!weekly && Number(row.totalHours) && s && e) weekly = Number(row.totalHours) / ((diffDays(s, e) + 1) / 7);   // 총 시간 → 주당 평균
+      let rate = weekly < 12 ? 30 : Math.min(100, Math.floor(weekly / base * 100));
+      if (row.mismatch) rate = Math.floor(rate * 0.8);
+      return { rate: Math.max(30, rate), base, weekly: Math.round(weekly * 10) / 10 };
     }
-    if (row.kind === 'univLecturer') return Math.max(50, Math.min(100, Number(row.rate) || 50));
-    if (c.rate != null && (row.rate === '' || row.rate == null)) return c.rate;
-    return Math.max(0, Math.min(100, Number(row.rate)));
+    if (row.kind === 'univLecturer') return { rate: Math.max(50, Math.min(100, Number(row.rate) || 50)) };
+    if (c.rate != null && (row.rate === '' || row.rate == null)) return { rate: c.rate };
+    return { rate: Math.max(0, Math.min(100, Number(row.rate) || 0)) };
   }
 
   function hobong(inp) {
@@ -58,8 +82,10 @@
     const rows = (inp.rows || []).map((r, i) => {
       const s = D(r.start), e = D(r.end);
       const ok = s && e && e >= s;
-      return { i, kind: r.kind, label: (CAREER.find(c => c.k === r.kind) || {}).label, note: r.note || '', s, e, ok, rate: ok ? careerRate(r) : 0 };
-    }).filter(r => r.ok);
+      const cr = ok ? careerRate(r, s, e) : {};
+      const lab = (CAREER.find(c => c.k === r.kind) || {}).label;
+      return { i, kind: r.kind, label: (r.content || '').trim() || lab, kindLabel: lab, note: r.note || '', s, e, ok, rate: cr.rate || 0, base: cr.base, weekly: cr.weekly };
+    }).filter(r => r.ok).sort((a, b) => a.s - b.s);   // 호봉획정표는 경력기간 순
     // 경력 중복: 날짜마다 가장 유리한(높은) 환산율 하나만 인정 (환산율표 15·16)
     const points = [...new Set(rows.flatMap(r => [r.s.getTime(), addDays(r.e, 1).getTime()]))].sort((a, b) => a - b);
     const segs = [];
@@ -74,24 +100,37 @@
       if (last && last.row === best && diffDays(last.e, a) === 1) last.e = b;
       else segs.push({ s: a, e: b, row: best });
     }
-    let total = 0;
-    rows.forEach(r => { r.used = 0; r.period = ymd(r.s, r.e); });
-    segs.forEach(sg => { const t = toMonths(ymd(sg.s, sg.e)) * sg.row.rate / 100; sg.row.used += t; total += t; });
-    rows.forEach(r => { r.usedP = fromMonths(r.used); });
+    let rawD = 0, totalD = 0;
+    rows.forEach(r => { r.period = ymd(r.s, r.e); r.usedD = 0; rawD += toD(r.period); });
+    segs.forEach(sg => { const t = Math.floor(toD(ymd(sg.s, sg.e)) * sg.row.rate / 100); sg.row.usedD += t; totalD += t; });
+    rows.forEach(r => { r.usedP = fromD(r.usedD); });
     if (overlapped) msgs.push({ level: 'info', text: '겹치는 경력이 있어 같은 기간은 환산율이 높은 경력 하나만 인정했습니다. 학교 강사 경력이 겹치면 학교별 실 근무시간을 합산해 한 줄로 입력하세요(중·고+초, 대학+전문대만 합산 가능).', ref: '지침 p.84' });
-    const totalP = fromMonths(total);
-    const base = Number(inp.base) || 0, add = (inp.sabeom ? 1 : 0) + (Number(inp.adj) || 0);
-    let grade = base + add + totalP.y;
-    let capped = false;
+    rows.filter(r => r.kind === 'gangsa').forEach(r => msgs.push({ level: 'info', text: `${r.label}: 주당 ${r.weekly}시간 ÷ 기준 ${r.base}시간 → 환산율 ${r.rate}%${r.weekly < 12 ? '(주 12시간 미만은 최저 30%)' : ''}`, ref: '지침 p.82' }));
+
+    const base = Number(inp.base) || 0;
+    const add = (Number(inp.eduAdj) || 0) + (Number(inp.adj) || 0);
+    const p14 = fromD(totalD);
+    const d16 = Math.max(0, totalD + add * 360);
+    const p16 = fromD(d16);
+    let grade = base + p16.y, capped = false;
     if (inp.limit14 && grade > 14) { grade = 14; capped = true; }
     if (grade > 40) grade = 40;
-    msgs.push({ level: 'ok', text: `초임호봉 = 기산호봉 ${base} + 가산 ${add} + 환산경력 ${totalP.y}년 = ${base + add + totalP.y}호봉${capped ? ' → 14호봉 제한 적용' : ''} (잔여 ${totalP.m}월 ${totalP.d}일)`, ref: '공무원보수규정 제8조' });
-    if (capped) msgs.push({ level: 'warn', text: '퇴직연금 수령자·명예퇴직자·정년퇴직자는 14호봉을 넘지 못합니다. 정근수당도 14호봉 기준·근무연수 5년만 인정합니다.', ref: '지침 p.16~17' });
-    if (rows.some(r => ['gangsa', 'univLecturer', 'company', 'academy', 'publicInst', 'researcher'].includes(r.kind)))
+    const rest = fromD(d16 - p16.y * 360);
+    // 차기승급일: 잔여기간이 1년이 되는 날이 속한 달의 다음 달 1일(그날이 1일이면 그날)
+    let next = null;
+    const at = D(inp.date);
+    if (at) {
+      const need = 360 - toD(rest);
+      const reach = addDays(new Date(at.getFullYear(), at.getMonth() + Math.floor(need / 30), at.getDate(), 12), need % 30);
+      next = reach.getDate() === 1 ? reach : new Date(reach.getFullYear(), reach.getMonth() + 1, 1, 12);
+    }
+    msgs.unshift({ level: 'ok', text: `(17) 사정호봉 = 기산호봉 ${base} + (16) 호봉획정경력 ${p16.y}년 = ${base + p16.y}호봉${capped ? ' → 호봉상한제 14호봉 적용' : ''} · 잔여 ${rest.m}월 ${rest.d}일`, ref: '공무원보수규정 제8조' });
+    if (capped) msgs.push({ level: 'warn', text: '퇴직연금 수령자(일시금 포함)·명예퇴직자·정년퇴직자는 14호봉을 넘지 못합니다. 정근수당도 14호봉 기준·근무연수 5년만 인정합니다.', ref: '지침 p.16~17' });
+    if (rows.some(r => ['gangsa', 'univLecturer', 'company', 'companyPersonal', 'academy', 'publicInst', 'researcher', 'govAgency'].includes(r.kind)))
       msgs.push({ level: 'warn', text: '유사경력(강사·회사·학원 등)은 반드시 전력조회(서식 12·13)로 확인하고, 주당 근무시간 15시간 이상인지(강사는 12시간) 확인하세요.', ref: '지침 p.16, p.82~84' });
-    msgs.push({ level: 'info', text: '계약 기간 중에는 호봉 정정·재획정·승급을 하지 않습니다. 본인의 경력 증명 미제출로 인한 정정은 불가하니 획정 전에 모든 경력을 받으세요. 연장 계약 때는 호봉을 다시 획정합니다.', ref: '지침 p.14, p.16' });
-    msgs.push({ level: 'info', text: '기산호봉과 가산연수는 공무원보수규정 [별표 22]와 「교육공무원 호봉획정 시 경력환산율표의 적용 등에 관한 예규」로 최종 확인하세요. 이 계산은 검토용입니다.', ref: '지침 p.16' });
-    return { rows, segs, total, totalP, grade, capped, msgs, fmt };
+    if (rows.some(r => r.kind === 'leaveCounted')) msgs.push({ level: 'info', text: '휴직 기간의 경력 인정 범위(예: 육아휴직 자녀별 인정 기간)는 공무원보수 업무지침으로 확인하고, 인정되는 부분만 입력하세요.', ref: '' });
+    msgs.push({ level: 'info', text: '기간제교원은 계약 기간 중 호봉 정정·재획정·승급을 하지 않습니다(차기승급일은 참고용). 연장 계약 때 다시 획정하고, 1정 자격 취득 시에는 재획정합니다.', ref: '지침 p.14, p.16' });
+    return { rows, segs, rawP: fromD(rawD), p14, add, p16, grade, capped, rest, next, msgs, fmt };
   }
 
   /* =====================================================================
@@ -175,6 +214,6 @@
     return { eligible: true, amount: Math.floor(Math.min(40, hoursPerWeek) / 40 * 8 * rate) };
   }
 
-  const api = { CAREER, hobong, ymd, fmt, extend, JG_RATE, jeonggeun, severance, weeklyHoliday };
+  const api = { CERT, EDU, CAREER, baseHoursFor, hobong, ymd, fmt, extend, JG_RATE, jeonggeun, severance, weeklyHoliday };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Rules3 = api;
 })(this);
