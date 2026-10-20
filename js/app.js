@@ -319,5 +319,5 @@
   function qaHit(x, terms) {
     return `<div class="hit"><div class="src">Q&amp;A ${x.no} · ${h(x.section)}</div><div class="q">Q. ${mark(x.q, terms)}</div>${x.a.map(a => `<p>${mark(a, terms)}</p>`).join('')}</div>`;
   }
-  window.App = { schoolVars, toast, showTab, refBtns, h, todayIso, fJ };
+  window.App = { schoolVars, toast, showTab, showSub, refBtns, h, todayIso, fJ };
 })();
