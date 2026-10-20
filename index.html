@@ -26,8 +26,9 @@
     <button role="tab" data-tab="judge" class="on">① 상황 판별</button>
     <button role="tab" data-tab="steps">② 절차 안내</button>
     <button role="tab" data-tab="docs">③ 공문 만들기</button>
-    <button role="tab" data-tab="calc">④ 계산기</button>
-    <button role="tab" data-tab="search">⑤ 지침·Q&amp;A 검색</button>
+    <button role="tab" data-tab="change">④ 육아휴직·계약 해지</button>
+    <button role="tab" data-tab="calc">⑤ 계산기</button>
+    <button role="tab" data-tab="search">⑥ 지침·Q&amp;A 검색</button>
   </nav>
 </header>
 
@@ -249,6 +250,105 @@
   </form>
 </section>
 
+<!-- ④ 육아휴직·계약 해지 -->
+<section id="tab-change" class="tab">
+  <div class="seg seg2" role="tablist">
+    <button type="button" data-sub2="leave" class="on">기간제교원 육아휴직</button>
+    <button type="button" data-sub2="term">중도 계약 해지</button>
+  </div>
+  <div class="grid2 sub2 on" data-panel2="leave">
+    <form id="fLeave" class="card" autocomplete="off">
+      <h2>육아휴직 신청 확인</h2>
+      <div class="row">
+        <label>담당(교과·학급)<input name="subject" placeholder="예: 3학년 1반 담임"></label>
+        <label>신청(접수)일<input type="date" name="applyDate"></label>
+      </div>
+      <div class="row">
+        <label>이 학교 계약 시작일<input type="date" name="cStart" required><small>기간 단절 없이 연장된 경우 최초 계약 시작일</small></label>
+        <label>계약 종료일<input type="date" name="cEnd" required></label>
+      </div>
+      <div class="row">
+        <label>휴직 시작일<input type="date" name="lStart" required></label>
+        <label>휴직 종료일<input type="date" name="lEnd" required></label>
+      </div>
+      <label class="chk"><input type="checkbox" name="pregnant"> 임신 중(모성 보호 육아휴직)</label>
+      <div class="row">
+        <label>자녀 생년월일<input type="date" name="childBirth"></label>
+        <label>출산 예정일(임신 중)<input type="date" name="dueDate"></label>
+      </div>
+      <div class="row">
+        <label>자녀 구분<select name="childOrder"><option>첫째</option><option>둘째</option><option>셋째</option><option>넷째 이상</option></select></label>
+        <label class="chk pad"><input type="checkbox" name="grade2"> 자녀가 초등학교 2학년 이하</label>
+      </div>
+      <div class="row">
+        <label>이 자녀로 이미 쓴 기간(개월)<input type="number" name="usedMonths" value="0" min="0"><small>다른 학교에서 쓴 기간 포함</small></label>
+        <label>이미 나누어 쓴 횟수<input type="number" name="splits" value="0" min="0"></label>
+      </div>
+      <label>기 사용 기간 <span class="muted">(서식 25 표에 들어감 · 한 줄에 하나)</span><textarea name="usedList" rows="2" placeholder="예: 2025. 3. 1.부터 2025. 8. 31.까지(6개월간)"></textarea></label>
+      <label class="chk"><input type="checkbox" name="urgent"> 7일 전 신청 예외 사유(유산·사산 위험, 조기 출산, 배우자 사망·질병·이혼 등)</label>
+      <label class="chk"><input type="checkbox" name="extra"> 6개월 추가 대상(부모 각 3개월 이상 사용, 한부모, 장애아동 부모)</label>
+      <label class="chk"><input type="checkbox" name="spouseSame"> 같은 자녀로 배우자가 현재 육아휴직 중</label>
+      <label>복직 예정일 <span class="muted">(복직원 작성 시)</span><input type="date" name="returnDate"></label>
+      <div class="actions"><button class="btn primary" type="submit">확인하기</button></div>
+    </form>
+    <div>
+      <div id="leaveOut" class="card result empty"><p class="hint">기간제교원의 육아휴직 신청이 들어오면<br>대상·6개월 근무·신청 기한·사용 기간을 확인합니다.</p></div>
+      <div class="card">
+        <h2>문서 만들기</h2>
+        <div class="actions dl">
+          <button type="button" class="btn primary" data-ldoc="form25">육아휴직원(서식 25)</button>
+          <button type="button" class="btn primary" data-ldoc="gian">육아휴직 허가 기안</button>
+          <button type="button" class="btn primary" data-ldoc="form26">복직원(서식 26)</button>
+        </div>
+        <p class="muted small">육아휴직 확인서(서식 27)는 고용보험법 시행규칙 별지 제102호 공식 서식을 고용24·고용노동부에서 내려받아 쓰세요.</p>
+        <div class="actions"><button type="button" class="btn" id="btnLeaveReplace">대체 기간제교원 채용 판별로 →</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2 sub2" data-panel2="term">
+    <form id="fTerm" class="card" autocomplete="off">
+      <h2>중도 계약 해지 확인</h2>
+      <div class="row">
+        <label>담당(교과·학급)<input name="subject" placeholder="예: 3학년 1반 담임"></label>
+        <label>오늘(통지 예정일)<input type="date" name="today"></label>
+      </div>
+      <div class="row">
+        <label>계약 시작일<input type="date" name="cStart" required><small>동일교 단절 없는 최초 계약일</small></label>
+        <label>계약 종료일<input type="date" name="cEnd" required></label>
+      </div>
+      <div class="row">
+        <label>해지일<input type="date" name="endDay" required><small>최종 근로일 다음날(조기 복직이면 복직일)</small></label>
+        <label>해지 사유<select name="reason"></select></label>
+      </div>
+      <label>원래 결원 사유 <span class="muted">(조기 복직일 때 · 예: 육아휴직)</span><input name="leaveKind" placeholder="휴직"></label>
+      <label>해지 사유 상세 <span class="muted">(서식 28에 추가 · 한 줄에 하나)</span><textarea name="detail" rows="3"></textarea></label>
+      <div class="row3">
+        <label>서면 통지일<input type="date" name="noticeDate"></label>
+        <label>인사자문위원회 일자<input type="date" name="committeeDate"></label>
+        <label>시각<input name="committeeTime" value="14:30"></label>
+      </div>
+      <div class="row">
+        <label>장소<input name="place" value="교무회의실"></label>
+        <label>보고 수신<input name="receiver" value="○○교육지원청교육장(교육지원과장)"></label>
+      </div>
+      <div class="actions"><button class="btn primary" type="submit">확인하기</button></div>
+    </form>
+    <div>
+      <div id="termOut" class="card result empty"><p class="hint">해지 사유와 해지일을 넣으면<br>30일 전 예고 기한, 인사자문위원회 소명 절차, 보고 기한을 알려드립니다.</p></div>
+      <div class="card">
+        <h2>문서 만들기</h2>
+        <div class="actions dl">
+          <button type="button" class="btn primary" data-tdoc="form28">해지(예고) 확인서(서식 28)</button>
+          <button type="button" class="btn primary" data-tdoc="report">중도 해지 보고 기안</button>
+          <button type="button" class="btn primary" data-tdoc="committee">인사자문위원회 개최 기안</button>
+        </div>
+        <p class="muted small">인사자문위원회 개최 기안은 귀책 사유(태만·복무 위반·성비위 등)로 해지할 때 씁니다. 회의록은 ③ 공문 만들기의 인사자문위원회 회의록 양식을 고쳐 쓰세요.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ④ 계산기 -->
 <section id="tab-calc" class="tab">
   <div class="grid3">
@@ -321,7 +421,10 @@
 <script src="js/rules.js"></script>
 <script src="js/docs.js"></script>
 <script src="js/docs2.js"></script>
+<script src="js/rules2.js"></script>
+<script src="js/docs3.js"></script>
 <script src="js/hwpx.js"></script>
 <script src="js/app.js"></script>
+<script src="js/app2.js"></script>
 </body>
 </html>

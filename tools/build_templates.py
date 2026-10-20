@@ -334,6 +334,83 @@ def report():
     D.save("report.hwpx")
 
 
+def form25():
+    """서식 25: 기간제교원 육아휴직원"""
+    D = Doc()
+    D.p("육 아 휴 직 원", D.title, "center")
+    D.p("")
+    D.p("□ 양육대상 자녀", D.bold)
+    D.table([
+        ["자녀 구분", "{{childOrder}}", "생년월일", "{{childBirth}}", "성 명", ""],
+        ["휴직가능\n여부확인", "{{eligible}}", None, None, None, None],
+        ["주 소", "", None, None, None, None],
+        ["휴직신청\n기간", "{{leavePeriod}}", None, None, None, None],
+    ], [8000, 9000, 7000, 9000, 6000, 7000], lambda r, c: D.bold if c in (0, 2, 4) and r == 0 or c == 0 else D.body,
+        merges=("B2:F2", "B3:F3", "B4:F4"))
+    D.p("")
+    D.p("□ 기 육아휴직 사용 기간", D.bold)
+    D.p("자녀 모두에 대하여 기 사용한 육아휴직 기간 기입", D.small)
+    D.table([["사용 기간", "대상자녀 성명", "생년월일"]] + [["{{u%d}}" % i, "", ""] for i in range(1, 7)],
+            [26000, 10000, 10000], lambda r, c: D.bold if r == 0 else D.body)
+    D.p("")
+    D.p("상기 자녀의 양육으로 인하여 이미 사용한 육아휴직 조회에 동의하며, 육아휴직하고자 증빙서를 붙여 제출하오니 허가하여 주시기 바랍니다.")
+    D.p("")
+    D.p("{{applyDate}}", D.body, "center")
+    D.p("")
+    D.p("소        속 : {{schoolName}}", D.body, "right")
+    D.p("직위(교과) : 기간제교원({{subject}})", D.body, "right")
+    D.p("생 년 월 일 :                              ", D.body, "right")
+    D.p("성        명 :                         (인)", D.body, "right")
+    D.p("")
+    D.p("{{schoolName}}장 귀하", D.big)
+    D.save("form25.hwpx")
+
+
+def form26():
+    """서식 26: 기간제교원 육아휴직 복직원"""
+    D = Doc()
+    D.p("복  직  원", D.title, "center")
+    D.p("")
+    D.p("")
+    D.p("자녀(성명:          , {{childBirth}} 생) 양육으로 인하여 {{leaveFrom}}부터 {{leaveTo}}까지({{leaveMonths}}개월간) 휴직한 바 「남녀고용평등과 일·가정 양립 지원에 관한 법률 시행령」 제14조제1항에 따른 사유로 종료되었기에 증빙서를 붙여 제출하오니 허가하여 주시기 바랍니다.")
+    D.p("")
+    D.p("복직 예정일: {{returnDate}}")
+    D.p("")
+    D.p("{{applyDate}}", D.body, "center")
+    D.p("")
+    D.p("소        속 : {{schoolName}}", D.body, "right")
+    D.p("직위(교과) : 기간제교원({{subject}})", D.body, "right")
+    D.p("생 년 월 일 :                              ", D.body, "right")
+    D.p("성        명 :                         (인)", D.body, "right")
+    D.p("")
+    D.p("{{schoolName}}장 귀하", D.big)
+    D.save("form26.hwpx")
+
+
+def form28():
+    """서식 28: 중도 계약 해지(예고) 확인서"""
+    D = Doc()
+    D.p("중도 계약 해지(예고) 확인서", D.title, "center")
+    D.p("")
+    D.table([
+        ["성    명", ""],
+        ["생년월일", ""],
+        ["소    속", "{{schoolName}}"],
+        ["직", "{{position}}"],
+        ["계약기간", "{{contractPeriod}}"],
+        ["해 지 일", "{{endDay}} (최종근로일 다음날)"],
+        ["계약 해지\n사유", "{{@reasonLines}}"],
+    ], [10000, 36000], lambda r, c: D.bold if c == 0 else D.body)
+    D.p("")
+    D.p("{{noticeDate}}", D.body, "center")
+    D.p("")
+    D.p("{{schoolName}}장 (직인)", D.big, "center")
+    D.p("")
+    D.p("※ 본인이 수령을 거부할 경우에는 내용증명(우편) 발송도 가능함.", D.small)
+    D.p("※ 계약기간 만료 전 중도 계약 해지 시 공문으로 즉시 보고(해임일로부터 5일 이내)", D.small)
+    D.save("form28.hwpx")
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     gian()
@@ -345,3 +422,6 @@ if __name__ == "__main__":
     contract()
     contract_hourly()
     report()
+    form25()
+    form26()
+    form28()

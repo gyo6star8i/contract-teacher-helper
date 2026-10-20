@@ -127,3 +127,5 @@ legend{font-weight:700;color:var(--pri);padding:0 6px;font-size:14px}
 @media (max-width:760px){.row4{grid-template-columns:1fr 1fr}}
 .chk.pad{margin-top:28px}
 .dl .btn{min-width:150px}
+.sub2{display:none}.sub2.on{display:grid}
+.steps.mini li{padding-bottom:12px}

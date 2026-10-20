@@ -174,10 +174,10 @@
 
   /* ---------- ③-2 채용 서류 ---------- */
   function showSub(name) {
-    $$('.seg button').forEach(b => b.classList.toggle('on', b.dataset.sub === name));
+    $$('[data-sub]').forEach(b => b.classList.toggle('on', b.dataset.sub === name));
     $$('.sub').forEach(p => p.classList.toggle('on', p.dataset.subpanel === name));
   }
-  $$('.seg button').forEach(b => b.addEventListener('click', () => showSub(b.dataset.sub)));
+  $$('[data-sub]').forEach(b => b.addEventListener('click', () => showSub(b.dataset.sub)));
 
   const fH = $('#fHire');
   fH.contractDate.value = todayIso;
@@ -319,4 +319,5 @@
   function qaHit(x, terms) {
     return `<div class="hit"><div class="src">Q&amp;A ${x.no} · ${h(x.section)}</div><div class="q">Q. ${mark(x.q, terms)}</div>${x.a.map(a => `<p>${mark(a, terms)}</p>`).join('')}</div>`;
   }
+  window.App = { schoolVars, toast, showTab, refBtns, h, todayIso, fJ };
 })();
