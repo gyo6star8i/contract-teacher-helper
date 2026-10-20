@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>계약제교원 채용 도우미</title>
+<meta name="description" content="경상북도 계약제교원(기간제교원·강사) 채용 절차 판별과 인사자문위원회 공문 작성 도우미">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">계</span>
+      <div>
+        <h1>계약제교원 채용 도우미</h1>
+        <p class="sub">기간제교원·강사 채용 절차 판별과 공문 작성</p>
+      </div>
+    </div>
+    <div class="top-right">
+      <span class="badge" id="ver"></span>
+      <button class="btn ghost" id="btnSchool">학교 정보</button>
+    </div>
+  </div>
+  <nav class="wrap tabs" role="tablist">
+    <button role="tab" data-tab="judge" class="on">① 상황 판별</button>
+    <button role="tab" data-tab="steps">② 절차 안내</button>
+    <button role="tab" data-tab="docs">③ 공문 만들기</button>
+    <button role="tab" data-tab="calc">④ 계산기</button>
+    <button role="tab" data-tab="search">⑤ 지침·Q&amp;A 검색</button>
+  </nav>
+</header>
+
+<main class="wrap">
+
+<!-- ① 판별 -->
+<section id="tab-judge" class="tab on">
+  <div class="grid2">
+    <form id="fJudge" class="card" autocomplete="off">
+      <h2>결원 상황</h2>
+      <div class="row">
+        <label>결원 대상<input name="target" placeholder="예: 4학년 2반 담임교사"></label>
+        <label>결원 사유
+          <select name="leaveType">
+            <option value="sick">병가</option><option value="leave">휴직(육아·질병 등)</option>
+            <option value="maternity">출산휴가</option><option value="longservice">장기재직휴가</option>
+            <option value="annual">연가</option><option value="dispatch">파견·연수</option><option value="etc">기타</option>
+          </select></label>
+      </div>
+      <div class="row">
+        <label>결원 시작일<input type="date" name="start" required></label>
+        <label>결원 종료일<input type="date" name="end" required></label>
+      </div>
+      <div class="row">
+        <label>근무 시작 예정일<input type="date" name="workStart"><small>비우면 결원 시작일</small></label>
+        <label>오늘(공고·기안일)<input type="date" name="today"></label>
+      </div>
+      <div class="row">
+        <label>학교급
+          <select name="schoolLevel"><option value="elem">초등</option><option value="mid">중등</option><option value="kinder">유치원</option><option value="special">특수</option></select></label>
+        <label>공고 진행 상황
+          <select name="noticeStage"><option value="none">아직 공고 안 함</option><option value="first_failed">1차 공고 → 적격자 없음</option><option value="second">2차 이상 공고 진행 중</option></select></label>
+      </div>
+      <label class="chk"><input type="checkbox" name="homeroom" checked> 담임 업무를 맡길 예정</label>
+
+      <h2 class="mt">채용 예정자 <span class="muted">(있을 때만)</span></h2>
+      <div class="row">
+        <label>생년월일<input type="date" name="birth"><small>판정에만 쓰이고 저장되지 않습니다</small></label>
+        <label>교원자격
+          <select name="cert"><option value="match">결원 교과·학교급과 일치</option><option value="level">학교급 불일치</option><option value="similar">유사 과목(중등)</option><option value="none">자격증 없음</option></select></label>
+      </div>
+      <div class="row">
+        <label>퇴직 여부
+          <select name="retire"><option value="">해당 없음</option><option value="honor">명예퇴직</option><option value="age">정년퇴직</option><option value="pension">기타 퇴직(연금 수령)</option><option value="other">기타 퇴직</option></select></label>
+        <label>퇴직일<input type="date" name="retireDate"></label>
+      </div>
+      <label class="chk"><input type="checkbox" name="pool"> 나이스 기간제교원 인력풀 등록자</label>
+      <label class="chk"><input type="checkbox" name="extend"> 우리 학교에서 같은 결원으로 근무 중인 사람과 <b>연장 계약</b></label>
+      <label class="chk ind"><input type="checkbox" name="hiredByExpansion"> 현재 계약이 2차 공고 자격 확대로 채용된 것</label>
+      <div class="actions"><button class="btn primary" type="submit">판별하기</button><button class="btn ghost" type="reset">초기화</button></div>
+    </form>
+
+    <div id="judgeOut" class="card result empty">
+      <p class="hint">왼쪽에 결원 상황을 입력하고 <b>판별하기</b>를 누르세요.<br>채용 신분, 공고 필요 여부, 자격 확대 가능 여부와 근거 조항을 알려드립니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ② 절차 -->
+<section id="tab-steps" class="tab">
+  <div id="stepsOut" class="card"><p class="hint">먼저 ① 상황 판별을 해 주세요.</p></div>
+  <div id="checkOut" class="card"></div>
+</section>
+
+<!-- ③ 공문 -->
+<section id="tab-docs" class="tab">
+  <div class="card warnbox">
+    <b>개인정보 원칙</b> — 사람 이름은 ○○○로 두고, 내려받은 한글 파일에서 직접 입력하세요. 이 화면의 입력 내용은 어디에도 전송·저장되지 않습니다(학교 정보만 이 브라우저에 저장).
+  </div>
+  <form id="fDoc" class="card" autocomplete="off">
+    <div class="doc-head">
+      <h2>인사자문위원회 공문</h2>
+      <button type="button" class="btn ghost" id="btnRefill">판별 결과로 다시 채우기</button>
+    </div>
+    <div class="row3">
+      <label>회의 날짜<input type="date" name="mDate"></label>
+      <label>시작 시각<input type="time" name="mTime" value="14:30"></label>
+      <label>장소<input name="place" value="교무회의실"></label>
+    </div>
+    <div class="row3">
+      <label>위원 수(위원장 포함)<select name="members"></select></label>
+      <label>위원장 직위<input name="chairPos" value="교감"></label>
+      <label>위원 직위<input name="memberPos" value="교사"></label>
+    </div>
+    <label>위원 성명 <span class="muted">(선택 · 쉼표로 구분, 위원장부터 · 저장 안 됨)</span><input name="names" placeholder="비우면 한글에서 직접 입력"></label>
+    <label>제목<input name="title"></label>
+    <label>안건<input name="agenda"></label>
+    <label>관련 <span class="muted">(한 줄에 하나 · 가. 나. 자동)</span><textarea name="related" rows="2"></textarea></label>
+    <div class="row">
+      <label>사유 <span class="muted">(1) 2) 자동)</span><textarea name="reasons" rows="4"></textarea></label>
+      <label>근거<textarea name="basis" rows="4"></textarea></label>
+    </div>
+    <div class="row">
+      <label>채용 개요 <span class="muted">(없으면 비움)</span><textarea name="plan" rows="3"></textarea></label>
+      <label>유의 사항<textarea name="notes" rows="3"></textarea></label>
+    </div>
+    <h3>결과 기안·회의록용</h3>
+    <label>관련에 추가할 개최 기안<input name="openRef" placeholder="예: ○○초등학교-1234(2026. 10. 20.) 인사자문위원회 개최"></label>
+    <div class="row3">
+      <label>심의 결과<select name="verdict"><option>채용 적격</option><option>채용 부적격</option><option>연장 계약 적격</option></select></label>
+      <label>신분<select name="type"><option>기간제교원</option><option>전일제강사</option><option>시간강사</option></select></label>
+      <label>계약 기간<input name="period"></label>
+    </div>
+    <label>회의 결과 <span class="muted">(한 줄에 하나 · 회의록에 - 로 들어감)</span><textarea name="minutes" rows="7"></textarea></label>
+    <div class="actions dl">
+      <button type="button" class="btn primary" data-doc="open">개최 기안 (.hwpx)</button>
+      <button type="button" class="btn primary" data-doc="result">개최 결과 기안 (.hwpx)</button>
+      <button type="button" class="btn primary" data-doc="minutes">회의록 (.hwpx)</button>
+    </div>
+    <p class="muted small">글꼴 맑은 고딕 11.5pt, 줄간격 103%. 결재란·문서번호는 K-에듀파인에서 생성되므로 본문만 붙여 쓰셔도 됩니다.</p>
+  </form>
+</section>
+
+<!-- ④ 계산기 -->
+<section id="tab-calc" class="tab">
+  <div class="grid3">
+    <div class="card calc">
+      <h2>임용 상한 연령</h2>
+      <label>생년월일<input type="date" id="cBirth"></label>
+      <label>임용(근무 시작)일<input type="date" id="cAt"></label>
+      <div class="out" id="cAgeOut"></div>
+    </div>
+    <div class="card calc">
+      <h2>1개월·6개월 기간</h2>
+      <label>시작일<input type="date" id="cPStart"></label>
+      <div class="out" id="cPOut"></div>
+      <p class="muted small">민법 제160조 역법 계산(Q&amp;A 6). 1개월 이상 결원은 기간제교원, 6개월 이상은 공고 필수.</p>
+    </div>
+    <div class="card calc">
+      <h2>연가·병가 일수</h2>
+      <label>계약 시작<input type="date" id="cLStart"></label>
+      <label>계약 종료<input type="date" id="cLEnd"></label>
+      <label>동일교 단절 없는 이전 계약 개월<input type="number" id="cLPrior" min="0" value="0"></label>
+      <div class="out" id="cLOut"></div>
+    </div>
+    <div class="card calc">
+      <h2>시간강사 수당</h2>
+      <label>1일 수업 시간<input type="number" id="cHours" min="1" max="8" value="4"></label>
+      <label>일수<input type="number" id="cHDays" min="1" max="3" value="1"></label>
+      <div class="out" id="cHOut"></div>
+      <p class="muted small">4시간 이하 시간당 25,000원, 초과분 시간당 10,000원(지침 p.21)</p>
+    </div>
+    <div class="card calc">
+      <h2>공고 마감일</h2>
+      <label>공고일<input type="date" id="cNDate"></label>
+      <div class="out" id="cNOut"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑤ 검색 -->
+<section id="tab-search" class="tab">
+  <div class="card">
+    <div class="search">
+      <input id="q" type="search" placeholder="예: 명예퇴직, 육아휴직, 담임, 연장 계약, p.19, Q&A 16">
+    </div>
+    <div class="chips" id="quick"></div>
+    <div id="searchOut"></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap foot">
+  <p><b>안내</b> 이 서비스는 「2026 경상북도 계약제교원 운영 지침(2026. 2. 1. 시행)」, 「계약제교원 운영 관련 Q&amp;A(2026. 2.)」, 「계약제교원 관련 법령」을 바탕으로 만든 참고용 도구입니다. 최종 판단은 지침 원문과 교육(지원)청에 확인하세요.</p>
+  <p>입력 내용은 서버로 전송되지 않으며, 접속 통계·추적 코드를 사용하지 않습니다.</p>
+</footer>
+
+<dialog id="dlgSchool">
+  <form method="dialog" id="fSchool" class="card">
+    <h2>학교 정보 <span class="muted">(이 브라우저에만 저장)</span></h2>
+    <div class="row"><label>학교명<input name="schoolName" placeholder="○○초등학교"></label><label>슬로건<input name="slogan" placeholder="배움과 나눔이 행복한 인재 육성"></label></div>
+    <div class="row"><label>우편번호<input name="zip"></label><label>주소<input name="address"></label></div>
+    <div class="row"><label>홈페이지<input name="homepage"></label><label>이메일(기안자)<input name="email"></label></div>
+    <div class="row"><label>전화<input name="tel"></label><label>전송(팩스)<input name="fax"></label></div>
+    <div class="row3"><label>기안자 직위<input name="drafterTitle" value="교감"></label><label>결재자 직위<input name="approverTitle" value="교장"></label><label>공개 여부<input name="openness" value="비공개(6)"></label></div>
+    <div class="actions"><button class="btn primary" value="save">저장</button><button class="btn ghost" value="cancel">닫기</button></div>
+  </form>
+</dialog>
+
+<div id="toast" role="status"></div>
+<script src="vendor/jszip.min.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/docs.js"></script>
+<script src="js/hwpx.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
