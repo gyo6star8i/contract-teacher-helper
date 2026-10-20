@@ -11,30 +11,40 @@
     const b = xml.indexOf('</hp:p>', i) + 7;
     return { a, b, text: xml.slice(a, b) };
   }
-  function fromProto(proto, token, text) {
-    return proto.replace(token, esc(text)).replace(/ id="\d+"/, ` id="${rid()}"`);
-  }
 
-  /* body: [{s:'L0'|'L1'|..., t:'...'}], vars: {key: value}, lists: {key: [..]} */
-  function fill(xml, { body, vars, lists }) {
-    if (body) {
-      const keys = ['L0', 'L1', 'L2', 'L3', 'NOTE', 'ATT', 'ATT2'];
-      const protos = {};
-      keys.forEach(k => {
-        const p = findPara(xml, `{{#${k}}}`);
-        if (p) { protos[k] = p.text; xml = xml.slice(0, p.a) + xml.slice(p.b); }
-      });
-      const anchor = findPara(xml, '{{#BODY}}');
-      const html = body.map(l => fromProto(protos[l.s] || protos.L0, `{{#${protos[l.s] ? l.s : 'L0'}}}`, l.t)).join('');
+  const escT = s => esc(s).replace(/\n/g, '<hp:lineBreak/>');
+
+  /* data = {
+   *   body | bodies: {BODY:[{s:'L0',t:'...'}], BODY2:[...]}   본문 묶음
+   *   lists: {key:[...]}  목록 치환,  vars: {key:value}  단순 치환 } */
+  const PROTO_KEYS = ['H', 'L0', 'L1', 'L2', 'L3', 'NOTE', 'C', 'ATT', 'ATT2'];
+  function fill(xml, data) {
+    const bodies = data.bodies || (data.body ? { BODY: data.body } : null);
+    const protos = {};
+    PROTO_KEYS.forEach(k => {
+      const p = findPara(xml, `{{#${k}}}`);
+      if (p) { protos[k] = p.text; xml = xml.slice(0, p.a) + xml.slice(p.b); }
+    });
+    // 본문 위치 표시({{#BODY}}, {{#BODY2}} ...) 채우기 — 쓰지 않은 위치는 제거
+    let m;
+    while ((m = xml.match(/\{\{#(BODY\d*)\}\}/))) {
+      const key = m[1], anchor = findPara(xml, m[0]);
+      const items = (bodies && bodies[key]) || [];
+      const html = items.map(l => {
+        const k = protos[l.s] ? l.s : 'L0';
+        return protos[k].replace(`{{#${k}}}`, escT(l.t)).replace(/ id="\d+"/, ` id="${rid()}"`);
+      }).join('');
       xml = xml.slice(0, anchor.a) + html + xml.slice(anchor.b);
     }
+    const lists = data.lists;
     if (lists) for (const k in lists) {
       const p = findPara(xml, `{{@${k}}}`);
       if (!p) continue;
-      const html = (lists[k] || []).map(t => fromProto(p.text, `{{@${k}}}`, t)).join('');
+      const html = (lists[k] || []).map(t => p.text.replace(`{{@${k}}}`, escT(t)).replace(/ id="\d+"/, ` id="${rid()}"`)).join('');
       xml = xml.slice(0, p.a) + html + xml.slice(p.b);
     }
-    if (vars) xml = xml.replace(/\{\{(\w+)\}\}/g, (m, k) => (k in vars ? esc(vars[k]) : ''));
+    const vars = data.vars || {};
+    xml = xml.replace(/\{\{(\w+)\}\}/g, (mm, k) => (k in vars ? escT(vars[k]) : ''));
     return xml;
   }
 

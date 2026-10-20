@@ -39,9 +39,9 @@
     return {
       schoolName: s.schoolName || '○○초등학교', slogan: s.slogan || '', zip: s.zip || '', address: s.address || '',
       homepage: s.homepage || '', tel: s.tel || '', fax: s.fax || '', email: s.email || '', openness: s.openness || '비공개(6)',
-      drafterTitle: s.drafterTitle || '교감', approverTitle: s.approverTitle || '교장',
+      receiver: '내부결재', drafterTitle: s.drafterTitle || '교감', approverTitle: s.approverTitle || '교장',
       addrLine: [s.zip ? '우 ' + s.zip + '  ' + (s.address || '') : (s.address || ''), s.homepage].filter(Boolean).join('  /  '),
-      contactLine: [s.tel && '전화 ' + s.tel, s.fax && '/전송 ' + s.fax, s.email, s.openness || '비공개(6)'].filter(Boolean).join('  /  '),
+      contactLine: [s.tel && '전화 ' + s.tel, s.fax && '전송 ' + s.fax, s.email, s.openness || '비공개(6)'].filter(Boolean).join('  /  '),
     };
   }
 
@@ -60,7 +60,7 @@
     lastInput = inp; lastResult = r;
     renderJudge(r);
     renderSteps(r, inp);
-    if (r.ok !== false || r.route) fillDocForm(r, inp);
+    if (r.ok !== false || r.route) { fillDocForm(r, inp); fillHire(r, inp); }
   });
   fJ.addEventListener('reset', () => setTimeout(() => { fJ.today.value = todayIso; }, 0));
 
@@ -89,21 +89,22 @@
         </div>
       </div>
       ${r.msgs.map(m => `<div class="msg ${m.level}"><span class="tag">${LV[m.level]}</span>${h(m.text)}${refBtns(m.ref)}</div>`).join('')}
-      ${bad ? '' : `<div class="actions"><button class="btn primary" data-go="steps">절차 보기</button>${r.committee ? '<button class="btn" data-go="docs">인사자문위원회 공문 만들기</button>' : ''}</div>`}`;
+      ${bad ? '' : `<div class="actions"><button class="btn primary" data-go="steps">절차 보기</button><button class="btn" data-go="docs" data-sub-go="hire">채용 서류 만들기</button>${r.committee ? '<button class="btn" data-go="docs" data-sub-go="committee">인사자문위원회 공문 만들기</button>' : ''}</div>`}`;
   }
   document.addEventListener('click', e => {
-    const g = e.target.closest('[data-go]'); if (g) showTab(g.dataset.go);
+    const g = e.target.closest('[data-go]'); if (g) { showTab(g.dataset.go); if (g.dataset.subGo) showSub(g.dataset.subGo); }
     const rf = e.target.closest('.ref'); if (rf) { $('#q').value = rf.dataset.ref; doSearch(); showTab('search'); }
   });
 
   /* ---------- ② 절차 ---------- */
+  const DOCLBL = { committee: '인사자문위원회 공문', plan: '채용 계획·공고문 만들기', contract: '계약서 만들기', report: '임용사항 보고 만들기' };
   function renderSteps(r, inp) {
     const out = $('#stepsOut');
     if (!r.steps || !r.steps.length) { out.innerHTML = '<p class="hint">채용이 불가한 상황입니다. ① 판별 결과를 확인하세요.</p>'; $('#checkOut').innerHTML = ''; return; }
     out.innerHTML = `<h2>${h((Rules.ROUTE[r.route] || {}).title)} 절차</h2><ol class="steps">` + r.steps.map(s => `
       <li><div class="t">${h(s.title)}${s.date ? `<span class="when">${Rules.kdate(s.date, true)}</span>` : ''}</div>
       <div class="d">${h(s.desc)} ${refBtns(s.ref)}</div>
-      ${s.doc === 'committee' ? '<div class="go"><button class="btn" data-go="docs">공문 만들기 →</button></div>' : ''}</li>`).join('') + '</ol>';
+      ${s.doc ? `<div class="go"><button class="btn" data-go="docs" data-sub-go="${s.doc === 'committee' ? 'committee' : 'hire'}">${DOCLBL[s.doc] || '공문 만들기'} →</button></div>` : ''}</li>`).join('') + '</ol>';
     const types = r.route === 'two_step' ? ['전일제강사'] : [r.type];
     const cl = Rules.checklist(types[0] === '기간제교원' ? '기간제교원' : '강사');
     $('#checkOut').innerHTML = `<h2>구비 서류 체크리스트 <span class="muted small">(${h(types[0])} · 체크는 저장되지 않음)</span></h2><div class="cl">` +
@@ -168,6 +169,74 @@
   $$('[data-doc]', fD).forEach(b => b.addEventListener('click', async () => {
     b.disabled = true;
     try { await makeDoc(b.dataset.doc); } catch (e) { console.error(e); toast('파일을 만들지 못했습니다: ' + e.message); }
+    b.disabled = false;
+  }));
+
+  /* ---------- ③-2 채용 서류 ---------- */
+  function showSub(name) {
+    $$('.seg button').forEach(b => b.classList.toggle('on', b.dataset.sub === name));
+    $$('.sub').forEach(p => p.classList.toggle('on', p.dataset.subpanel === name));
+  }
+  $$('.seg button').forEach(b => b.addEventListener('click', () => showSub(b.dataset.sub)));
+
+  const fH = $('#fHire');
+  fH.contractDate.value = todayIso;
+  function setDates(base) {
+    const d = Rules.D(base); if (!d) return;
+    const o = Docs2.schedule(d);
+    for (const k in o) fH[k].value = o[k];
+  }
+  function updMonths() {
+    const s = Rules.D(fH.cStart.value), e = Rules.D(fH.cEnd.value);
+    fH.months.value = s && e && e >= s ? Rules.contractMonths(s, e) : '';
+  }
+  fH.noticeDate.addEventListener('change', () => setDates(fH.noticeDate.value));
+  fH.cStart.addEventListener('change', updMonths); fH.cEnd.addEventListener('change', updMonths);
+  fH.typeLabel.addEventListener('change', () => { if (fH.typeLabel.value !== '기간제교원' && fH.method.value === 'pool') fH.method.value = 'skip'; });
+
+  function fillHire(r, inp) {
+    if (!r.route || r.route === 'impossible') return;
+    const o = Docs2.hireDefaults(r, inp);
+    ['typeLabel', 'cStart', 'cEnd', 'reasonText', 'round', 'expandText', 'method', 'certReq', 'noticeDate', 'recvEnd', 'docAnnounce', 'interviewDate', 'finalAnnounce', 'submitEnd', 'retiredYN', 'retireKind']
+      .forEach(k => { if (fH[k] && o[k] !== undefined) fH[k].value = o[k]; });
+    if (inp.retireDate) fH.retireDate.value = inp.retireDate;
+    if (inp.target && !fH.subject.value) fH.subject.value = inp.target.replace(/교사$/, '');
+    fH.noticeCount.value = o.method === 'notice' ? (o.round === '2차' ? '2' : '1') : '0';
+    updMonths();
+  }
+  $('#btnHireRefill').addEventListener('click', () => {
+    if (!lastResult) { toast('먼저 ① 상황 판별을 해 주세요.'); return; }
+    fillHire(lastResult, lastInput); toast('판별 결과로 다시 채웠습니다.');
+  });
+
+  function hireFields() {
+    const o = {};
+    $$('input,select,textarea', fH).forEach(el => o[el.name] = el.type === 'checkbox' ? el.checked : el.value);
+    o.schoolName = schoolVars().schoolName; o.tel = schoolVars().tel;
+    o.mid = lastInput && lastInput.schoolLevel === 'mid';
+    if (!o.recvPlace) o.recvPlace = o.schoolName + ' 행정실';
+    return o;
+  }
+  const HDOC = {
+    planGian: f => ({ tpl: 'gian', data: Docs2.planGian(f), name: '채용계획 기안' }),
+    plan: f => { const d = Docs2.planDoc(f); return { tpl: d.template, data: d, name: '채용 계획' }; },
+    notice: f => ({ tpl: 'notice', data: Docs2.noticeDoc(f), name: '채용 공고문' }),
+    contract: f => { const d = Docs2.contractDoc(f); return { tpl: d.template, data: d, name: d.template === 'contract' ? '채용계약서' : '근로계약서' }; },
+    report: f => ({ tpl: 'report', data: Docs2.reportDoc(f), name: '임용사항 보고' }),
+  };
+  $$('[data-hdoc]', fH).forEach(b => b.addEventListener('click', async () => {
+    const f = hireFields();
+    if (!f.cStart || !f.cEnd) { toast('계약 시작일·종료일을 입력하세요.'); return; }
+    if (b.dataset.hdoc === 'notice' && f.method !== 'notice') { if (!confirm('채용 방식이 공고 생략입니다. 그래도 공고문을 만들까요?')) return; }
+    if (b.dataset.hdoc === 'report' && f.typeLabel !== '기간제교원') toast('임용사항 보고(서식 21)는 기간제교원용입니다. 강사는 학교 지침에 따르세요.');
+    b.disabled = true;
+    try {
+      const { tpl, data, name } = HDOC[b.dataset.hdoc](f);
+      data.vars = Object.assign({}, schoolVars(), data.vars);
+      const blob = await Hwpx.build(`templates/${tpl}.hwpx`, data);
+      Hwpx.download(blob, `${(f.cStart || '').replace(/-/g, '')}_${f.typeLabel}_${name}.hwpx`);
+      toast('한글 파일을 내려받았습니다.');
+    } catch (e) { console.error(e); toast('파일을 만들지 못했습니다: ' + e.message); }
     b.disabled = false;
   }));
 

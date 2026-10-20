@@ -97,7 +97,11 @@
   <div class="card warnbox">
     <b>개인정보 원칙</b> — 사람 이름은 ○○○로 두고, 내려받은 한글 파일에서 직접 입력하세요. 이 화면의 입력 내용은 어디에도 전송·저장되지 않습니다(학교 정보만 이 브라우저에 저장).
   </div>
-  <form id="fDoc" class="card" autocomplete="off">
+  <div class="seg" role="tablist">
+    <button type="button" data-sub="committee" class="on">인사자문위원회</button>
+    <button type="button" data-sub="hire">채용 계획 · 공고 · 계약서 · 임용 보고</button>
+  </div>
+  <form id="fDoc" class="card sub on" data-subpanel="committee" autocomplete="off">
     <div class="doc-head">
       <h2>인사자문위원회 공문</h2>
       <button type="button" class="btn ghost" id="btnRefill">판별 결과로 다시 채우기</button>
@@ -138,6 +142,110 @@
       <button type="button" class="btn primary" data-doc="minutes">회의록 (.hwpx)</button>
     </div>
     <p class="muted small">글꼴 맑은 고딕 11.5pt, 줄간격 103%. 결재란·문서번호는 K-에듀파인에서 생성되므로 본문만 붙여 쓰셔도 됩니다.</p>
+  </form>
+
+  <form id="fHire" class="card sub" data-subpanel="hire" autocomplete="off">
+    <div class="doc-head">
+      <h2>채용 서류</h2>
+      <button type="button" class="btn ghost" id="btnHireRefill">판별 결과로 다시 채우기</button>
+    </div>
+    <fieldset><legend>채용 개요</legend>
+      <div class="row3">
+        <label>신분<select name="typeLabel"><option>기간제교원</option><option>전일제강사</option><option>시간강사</option></select></label>
+        <label>과목(담당)<input name="subject" placeholder="예: 4학년 2반 담임(초등 전 교과)"></label>
+        <label>인원(명)<input type="number" name="count" value="1" min="1"></label>
+      </div>
+      <div class="row3">
+        <label>계약 시작일<input type="date" name="cStart"></label>
+        <label>계약 종료일<input type="date" name="cEnd"></label>
+        <label>계약 개월 수<input name="months" readonly><small>15일 이상 1개월로 자동 계산</small></label>
+      </div>
+      <label>채용 사유<input name="reasonText" placeholder="예: 4학년 2반 담임 ○○○ 교사의 병가 대체"></label>
+      <div class="row3">
+        <label>채용 방식<select name="method"><option value="notice">공개채용(공고)</option><option value="pool">인력풀(공고 생략, 6개월 미만)</option><option value="skip">공고 생략(1개월 미만 강사·연장)</option></select></label>
+        <label>공고 차수<select name="round"><option>1차</option><option>2차</option></select></label>
+        <label class="chk pad"><input type="checkbox" name="pool"> 인력풀 병행</label>
+      </div>
+      <label>자격 확대 사유 <span class="muted">(2차 공고만 · 예: 임용 상한 연령, 명예퇴직 2년 미만, 학교급 불일치)</span><input name="expandText"></label>
+      <label>자격 요건<input name="certReq"></label>
+      <label>관련 문서 <span class="muted">(채용계획 기안용 · 한 줄에 하나 · 예: 휴직·병가 승인 문서)</span><textarea name="related" rows="2"></textarea></label>
+    </fieldset>
+    <fieldset><legend>전형 일정 <span class="muted">(공고일을 바꾸면 나머지 날짜가 자동 계산됩니다)</span></legend>
+      <div class="row3">
+        <label>공고일<input type="date" name="noticeDate"></label>
+        <label>접수 마감일<input type="date" name="recvEnd"><small>공고일 제외 3일 이상</small></label>
+        <label>서류전형 발표<input type="date" name="docAnnounce"></label>
+      </div>
+      <div class="row3">
+        <label>면접일<input type="date" name="interviewDate"></label>
+        <label>면접 시각<input name="interviewTime" value="10:00"></label>
+        <label>최종합격자 발표<input type="date" name="finalAnnounce"></label>
+      </div>
+      <div class="row3">
+        <label>최종합격자 서류 제출 마감<input type="date" name="submitEnd"></label>
+        <label>서류 반환 청구 기간(일)<input type="number" name="returnDays" value="14" min="14" max="180"></label>
+        <label>서류전형 배수<input type="number" name="multiple" value="3" min="2"></label>
+      </div>
+      <div class="row3">
+        <label>접수 방법<input name="recvMethod" value="방문접수, 우편접수, 이메일접수"></label>
+        <label>접수처<input name="recvPlace" placeholder="○○학교 행정실"></label>
+        <label>심사 장소<input name="place" value="교무회의실"></label>
+      </div>
+    </fieldset>
+    <fieldset><legend>심사 배점 · 채용심사위원회</legend>
+      <div class="row4">
+        <label>교원자격증<input type="number" name="dp1" value="10"></label><label>경력<input type="number" name="dp2" value="10"></label>
+        <label>직무관련 자격증<input type="number" name="dp3" value="10"></label><label>자기소개서<input type="number" name="dp4" value="10"></label>
+      </div>
+      <div class="row4">
+        <label>교직자 품성<input type="number" name="ip1" value="20"></label><label>교과 전문성<input type="number" name="ip2" value="20"></label>
+        <label>업무수행·생활지도<input type="number" name="ip3" value="10"></label><label>경력·자격증 활용<input type="number" name="ip4" value="10"></label>
+      </div>
+      <div class="row3">
+        <label>심사위원 수<select name="judges"><option>3</option><option>4</option><option>5</option></select></label>
+        <label>위원장 직위<input name="chairPos" value="교감"></label>
+        <label>위원 직위<input name="memberPos" value="교사"></label>
+      </div>
+      <label class="chk"><input type="checkbox" name="demo"> 수업실연 실시</label>
+    </fieldset>
+    <fieldset><legend>계약서</legend>
+      <div class="row4">
+        <label>호봉<input name="grade" placeholder="획정 후 입력"></label>
+        <label>보수 지급일(매월)<input name="payDay" value="20"></label>
+        <label>휴업기간 보수<select name="holidayPay"><option value="yes">지급한다</option><option value="no">지급하지 아니한다</option></select></label>
+        <label>계약일<input type="date" name="contractDate"></label>
+      </div>
+      <div class="row4">
+        <label>1일 근무시간<input name="hoursPerDay" value="8"></label>
+        <label>주 근무일<input name="daysPerWeek" value="5"></label>
+        <label>병가 일수<input name="sickDays"><small>비우면 계약 개월 × 60/12</small></label>
+        <label>시간강사 시급(원)<input name="hourlyRate" value="25,000"></label>
+      </div>
+      <div class="row">
+        <label>시간강사 근로일<input name="workDays" value="월요일 ~ 금요일"></label>
+        <label>시간강사 총 근로시간<input name="totalHours"></label>
+      </div>
+    </fieldset>
+    <fieldset><legend>임용사항 보고</legend>
+      <div class="row3">
+        <label>수신<input name="receiver" value="○○교육지원청교육장(교육지원과장)"></label>
+        <label>자격 종별<input name="certType" placeholder="예: 초등 2정"></label>
+        <label>공고 횟수<input name="noticeCount" placeholder="예: 2"></label>
+      </div>
+      <div class="row3">
+        <label>퇴직교원 임용 여부<select name="retiredYN"><option>아니오</option><option>예</option></select></label>
+        <label>퇴직 종류<input name="retireKind" placeholder="예: 명예퇴직"></label>
+        <label>퇴직일<input type="date" name="retireDate"></label>
+      </div>
+    </fieldset>
+    <div class="actions dl">
+      <button type="button" class="btn primary" data-hdoc="planGian">채용계획 기안</button>
+      <button type="button" class="btn primary" data-hdoc="plan">채용 계획(붙임)</button>
+      <button type="button" class="btn primary" data-hdoc="notice">채용 공고문</button>
+      <button type="button" class="btn primary" data-hdoc="contract">계약서</button>
+      <button type="button" class="btn primary" data-hdoc="report">임용사항 보고</button>
+    </div>
+    <p class="muted small">성명·생년월일·주소·자격증번호 칸은 비워 두었습니다. 내려받은 한글 파일에서 직접 입력하세요. 공고문 게시는 경상북도교육청 홈페이지(채용정보/기간제교사/구인)에만 합니다.</p>
   </form>
 </section>
 
@@ -212,6 +320,7 @@
 <script src="vendor/jszip.min.js"></script>
 <script src="js/rules.js"></script>
 <script src="js/docs.js"></script>
+<script src="js/docs2.js"></script>
 <script src="js/hwpx.js"></script>
 <script src="js/app.js"></script>
 </body>
