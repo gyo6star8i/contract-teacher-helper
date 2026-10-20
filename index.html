@@ -26,9 +26,10 @@
     <button role="tab" data-tab="judge" class="on">① 상황 판별</button>
     <button role="tab" data-tab="steps">② 절차 안내</button>
     <button role="tab" data-tab="docs">③ 공문 만들기</button>
-    <button role="tab" data-tab="change">④ 육아휴직·계약 해지</button>
-    <button role="tab" data-tab="calc">⑤ 계산기</button>
-    <button role="tab" data-tab="search">⑥ 지침·Q&amp;A 검색</button>
+    <button role="tab" data-tab="review">④ 심사·평가</button>
+    <button role="tab" data-tab="change">⑤ 육아휴직·계약 해지</button>
+    <button role="tab" data-tab="calc">⑥ 계산기</button>
+    <button role="tab" data-tab="search">⑦ 지침·Q&amp;A 검색</button>
   </nav>
 </header>
 
@@ -250,7 +251,60 @@
   </form>
 </section>
 
-<!-- ④ 육아휴직·계약 해지 -->
+<!-- ④ 심사·평가 -->
+<section id="tab-review" class="tab">
+  <div class="seg" role="tablist">
+    <button type="button" data-sub3="score" class="on">채용 심사 점수 집계</button>
+    <button type="button" data-sub3="perf">근무실적 평가(서식 18)</button>
+  </div>
+  <div class="sub3 on" data-panel3="score">
+    <div class="card warnbox"><b>개인정보</b> — 지원자는 성명 대신 <b>관리번호</b>(예: 1번, A-01)로 입력하세요. 입력한 점수와 이름은 저장되지 않으며 새로고침하면 사라집니다.</div>
+    <form id="fScore" class="card" autocomplete="off">
+      <h2>심사 설정</h2>
+      <div class="row4">
+        <label>신분<select name="typeLabel"><option>기간제교원</option><option>전일제강사</option><option>시간강사</option></select></label>
+        <label>지원자 수<select name="n"></select></label>
+        <label>심사위원 수<select name="j"><option>3</option><option>4</option><option>5</option></select></label>
+        <label>채용 인원<input type="number" name="count" value="1" min="1"></label>
+      </div>
+      <div class="row4">
+        <label>서류 만점<input type="number" name="dMax" value="40"></label>
+        <label>면접 만점<input type="number" name="iMax" value="60"></label>
+        <label>서류 합격 배수<input type="number" name="multiple" value="3" min="1"></label>
+        <label class="chk pad"><input type="checkbox" name="demo"> 수업실연(40점) 실시</label>
+      </div>
+      <div class="row3">
+        <label>서류심사일<input type="date" name="docDate"></label>
+        <label>면접일<input type="date" name="intDate"></label>
+        <label>관련 문서(채용 계획)<input name="related" placeholder="예: ○○초등학교-1234(2026. 10. 21.) 기간제교원 채용 계획"></label>
+      </div>
+      <p class="muted small">배점은 ③ 공문 만들기 › 채용 서류의 심사 배점과 같게 맞추세요. 단계 점수는 심사위원 점수의 <b>평균</b>으로 계산합니다.</p>
+      <div id="scoreGrids"></div>
+      <div class="actions"><button class="btn primary" type="submit">집계하기</button></div>
+    </form>
+    <div id="scoreOut" class="card result empty"><p class="hint">점수를 입력하고 <b>집계하기</b>를 누르면 서류 합격자(배수), 과락, 순위, 동점자 처리 결과를 보여 드립니다.</p></div>
+    <div class="card">
+      <h2>문서 만들기</h2>
+      <div class="actions dl">
+        <button type="button" class="btn primary" data-sdoc="tallyDoc">서류심사 점수 집계표(서식 5)</button>
+        <button type="button" class="btn primary" data-sdoc="tallyInt">면접심사 점수 집계표(서식 7)</button>
+        <button type="button" class="btn primary" data-sdoc="tallyDemo">수업실연 점수 집계표</button>
+        <button type="button" class="btn primary" data-sdoc="result">심사 결과 기안</button>
+      </div>
+      <h3>심사위원용 빈 서식</h3>
+      <div class="actions dl">
+        <button type="button" class="btn" data-sdoc="form3">심사위원 서약서(서식 3)</button>
+        <button type="button" class="btn" data-sdoc="form4">서류심사 평가표(서식 4)</button>
+        <button type="button" class="btn" data-sdoc="form6">면접심사 평가표(서식 6)</button>
+        <button type="button" class="btn" data-sdoc="form8">수업실연 평가표(서식 8)</button>
+      </div>
+      <p class="muted small">평가표의 배점은 위 서류·면접 만점과 ③ 채용 서류의 항목별 배점을 따릅니다. 선발 전형 자료(평가표·집계표)는 비전자문서로 준영구 보관합니다(지침 p.13).</p>
+    </div>
+  </div>
+  <div class="sub3" data-panel3="perf"><div class="card"><p class="hint">준비 중입니다.</p></div></div>
+</section>
+
+<!-- ⑤ 육아휴직·계약 해지 -->
 <section id="tab-change" class="tab">
   <div class="seg seg2" role="tablist">
     <button type="button" data-sub2="leave" class="on">기간제교원 육아휴직</button>
@@ -423,8 +477,10 @@
 <script src="js/docs2.js"></script>
 <script src="js/rules2.js"></script>
 <script src="js/docs3.js"></script>
+<script src="js/score.js"></script>
 <script src="js/hwpx.js"></script>
 <script src="js/app.js"></script>
 <script src="js/app2.js"></script>
+<script src="js/app3.js"></script>
 </body>
 </html>

@@ -129,3 +129,13 @@ legend{font-weight:700;color:var(--pri);padding:0 6px;font-size:14px}
 .dl .btn{min-width:150px}
 .sub2{display:none}.sub2.on{display:grid}
 .steps.mini li{padding-bottom:12px}
+.sub3{display:none}.sub3.on{display:block}
+.grid-wrap{overflow-x:auto;margin:10px 0 16px}
+table.sg{border-collapse:collapse;width:100%;font-size:14px}
+table.sg th,table.sg td{border:1px solid var(--line);padding:4px 6px;text-align:center}
+table.sg th{background:#f0f3ee;font-weight:600;white-space:nowrap}
+table.sg input{margin:0;padding:5px 6px;text-align:center;min-width:56px}
+table.sg td.nm input{text-align:left;min-width:110px}
+table.sg td.av{font-weight:700;color:var(--pri);min-width:56px}
+table.res td,table.res th{padding:7px 8px}
+.badge-ok{color:var(--ok);font-weight:700}.badge-no{color:var(--block);font-weight:700}.badge-mid{color:var(--warn);font-weight:700}
