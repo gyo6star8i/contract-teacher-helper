@@ -157,3 +157,7 @@ fieldset.reasons{padding:10px 14px 6px}
 #lawPreview{margin:6px 0 4px;color:var(--info)}
 .inline-chks{display:flex;gap:14px;padding:8px 0 2px}
 .inline-chks .chk{margin:0;font-weight:500}
+.top-right-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.top .contact{margin:0;font-size:12px;opacity:.85;white-space:nowrap}
+.top .contact a{color:#fff}
+@media (max-width:600px){.top-in{flex-wrap:wrap}.top-right-wrap{align-items:flex-start}.top .contact{white-space:normal}}
