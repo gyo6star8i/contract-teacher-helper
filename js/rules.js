@@ -47,11 +47,49 @@
     return d.getFullYear() + '. ' + (d.getMonth() + 1) + '. ' + d.getDate() + '.' + (withDay ? '(' + WEEK[d.getDay()] + ')' : '');
   }
 
-  /* ---------- 상수 라벨 ---------- */
+  /* ---------- 결원 사유와 관련 법령 ---------- */
+  // 교육공무원법 제32조제1항 각 호, 교육공무원임용령 제13조제1항 각 호
+  const LAW1 = '「교육공무원법」 제32조제1항제1호';
+  const LAW2 = '「교육공무원법」 제32조제1항제2호';
+  const DEC1 = '「교육공무원임용령」 제13조제1항제1호';
   const LEAVE = {
-    sick: '병가', leave: '휴직', maternity: '출산휴가', longservice: '장기재직휴가',
-    annual: '연가', dispatch: '파견·연수', etc: '기타 사유'
+    sick: '병가', annual: '연가', special: '특별휴가', maternity: '출산휴가', longservice: '장기재직휴가',
+    leave: '휴직', dispatch: '파견·연수', discipline: '정직·직위해제',
+    retire: '퇴직(임용후보자 없음)', temporary: '특정 교과 한시적 담당', expert: '교육공무원이었던 사람의 지식·경험 활용', etc: '기타 사유',
   };
+  const LEAVE_LAW = {
+    leave: [LAW1],
+    sick: [LAW2, DEC1], annual: [LAW2, DEC1], special: [LAW2, DEC1], maternity: [LAW2, DEC1], longservice: [LAW2, DEC1],
+    dispatch: [LAW2, DEC1], discipline: [LAW2, DEC1],
+    retire: [LAW2, '「교육공무원임용령」 제13조제1항제2호'],
+    temporary: ['「교육공무원법」 제32조제1항제3호'],
+    expert: ['「교육공무원법」 제32조제1항제4호'],
+    etc: [],
+  };
+  const LEAVE_ORDER = Object.keys(LEAVE);
+  // 입력: inp.leaveTypes(배열) 또는 예전 inp.leaveType(문자열)
+  function leaveKeys(inp) {
+    const a = Array.isArray(inp.leaveTypes) ? inp.leaveTypes : (inp.leaveType ? [inp.leaveType] : []);
+    return LEAVE_ORDER.filter(k => a.includes(k));
+  }
+  function leaveLabel(inp) {
+    const k = leaveKeys(inp);
+    return k.length ? k.map(x => x === 'retire' ? '퇴직' : LEAVE[x]).join('·') : '결원';
+  }
+  // 관련 법령: 같은 호끼리 묶어 "「교육공무원법」 제32조제1항제2호, 「교육공무원임용령」 제13조제1항제1호(병가·연가)"
+  function legalBasis(inp) {
+    const groups = [];
+    leaveKeys(inp).forEach(k => {
+      const law = LEAVE_LAW[k] || [];
+      if (!law.length) return;
+      const key = law.join(', ');
+      let g = groups.find(x => x.key === key);
+      if (!g) groups.push(g = { key, names: [] });
+      g.names.push(k === 'retire' ? '퇴직 결원' : LEAVE[k]);
+    });
+    const ho = g => Number((g.key.match(/제32조제1항제(\d)호/) || [0, 9])[1]) * 10 + Number((g.key.match(/제13조제1항제(\d)호/) || [0, 0])[1]);
+    return groups.sort((a, b) => ho(a) - ho(b)).map(g => `${g.key}(${g.names.join('·')})`);
+  }
 
   /* ---------- 판별 ---------- */
   function judge(inp) {
@@ -78,12 +116,21 @@
     else r.type = '전일제강사';
     r.isGigan = r.type === '기간제교원';
 
-    if (inp.leaveType === 'sick' && r.days >= 30)
+    const lk = leaveKeys(inp), has = k => lk.includes(k);
+    r.leaveKeys = lk; r.leaveLabel = leaveLabel(inp); r.legal = legalBasis(inp);
+    if (!lk.length) say('warn', '결원 사유를 하나 이상 고르세요. 사유에 따라 공문의 관련 법령이 달라집니다.', '');
+    if (has('sick') && r.days >= 30)
       say('info', '병가가 30일 이상 계속되면 휴가 일수에 토요일·공휴일이 포함되므로, 종료일이 공휴일이어도 계약 기간에 포함합니다.', 'Q&A 9');
-    if (inp.leaveType === 'longservice')
+    if (has('longservice'))
       say('info', '장기재직휴가는 평일 기준으로 결원 기간이 연속될 때만 하나의 채용 기간으로 묶을 수 있습니다. 연속 1개월 미만이면 강사, 1개월 이상이면 기간제교원입니다.', '지침 p.14');
-    if (inp.leaveType === 'annual')
-      say('info', '병가·연가 뒤에 휴직이 이어지고 합산 1개월 이상이면 병가·연가 기간부터 기간제교원 채용이 가능합니다.', 'Q&A 13');
+    const vac = lk.filter(k => ['sick', 'annual', 'special', 'maternity', 'longservice'].includes(k));
+    if (vac.length > 1 || (vac.length && (has('leave') || has('retire'))))
+      say('info', `${leaveLabel(inp)}을(를) 이어서 하나의 결원 기간으로 묶으려면 ① 앞 휴가의 종료일과 다음 휴가(휴직·퇴직)의 시작일이 연속되고 ② 모두 허가되어 합산 1개월 이상이어야 합니다. 이때 병가·연가 기간부터 기간제교원으로 채용할 수 있습니다(계약 시점 기준). 결원 시작일은 첫 휴가 시작일, 종료일은 마지막 휴가(휴직) 종료일로 넣으세요.`, 'Q&A 13');
+    else if (has('annual') || has('sick'))
+      say('info', '병가·연가 뒤에 휴직이 이어지고 합산 1개월 이상이면 병가·연가 기간부터 기간제교원 채용이 가능합니다. 이어지는 사유가 있으면 결원 사유를 함께 고르세요.', 'Q&A 13');
+    if (has('retire')) say('info', '퇴직으로 신규채용할 사유가 생겼으나 교사임용후보자명부에 임용 대상자가 없는 경우의 기간제교원 임용입니다.', '임용령 제13조');
+    if (has('temporary')) say('info', '특정 교과를 한시적으로 담당하게 하는 임용으로, 결원 대체가 아닙니다. 채용 기간은 해당 교과 운영 기간으로 정하세요.', '교육공무원법 제32조');
+    if (has('expert')) say('info', '교육공무원이었던 사람의 지식이나 경험을 활용하는 임용입니다. 이 경우만 책임이 무거운 감독 업무의 직위에 임용될 수 있습니다(교육공무원법 제32조제2항).', '교육공무원법 제32조');
 
     /* 2. 후보자 정보 → 자격 확대 필요 여부 */
     const birth = D(inp.birth);
@@ -290,6 +337,6 @@
     return m;
   }
 
-  const api = { RULES, ROUTE, LEAVE, judge, checklist, annualLeave, sickLeave, hourlyPay, contractMonths, periodEnd, ageAt, semesterEnd, D, iso, kdate, addDays, diffDays };
+  const api = { RULES, ROUTE, LEAVE, LEAVE_LAW, leaveKeys, leaveLabel, legalBasis, judge, checklist, annualLeave, sickLeave, hourlyPay, contractMonths, periodEnd, ageAt, semesterEnd, D, iso, kdate, addDays, diffDays };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Rules = api;
 })(this);

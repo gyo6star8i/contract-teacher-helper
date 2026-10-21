@@ -7,7 +7,7 @@
 
   function ctx(r, inp) {
     const vacancy = (inp.target || '').trim() || '○학년 ○반 담임교사';
-    const leave = R.LEAVE[inp.leaveType] || '결원';
+    const leave = R.leaveLabel(inp);
     let type = r.type, from = r.start, to = r.end, expanded = r.expanded;
     if (r.route === 'two_step') { type = '전일제강사'; from = r.stepA.from; to = r.stepA.to; expanded = r.stepAExpanded; }
     const exps = (r.route === 'two_step' && !expanded) ? [] : r.expansions.map(e => e.replace(/\(.*\)/, '').trim());

@@ -30,7 +30,11 @@
     if (r.route === 'two_step') { type = r.stepB.isGigan ? '기간제교원' : '전일제강사'; from = r.stepB.from; to = r.stepB.to; }
     o.typeLabel = type;
     o.cStart = R.iso(from); o.cEnd = R.iso(to);
-    o.reasonText = `${(inp.target || '').trim() || '○○○'} ○○○ 교사의 ${R.LEAVE[inp.leaveType] || '결원'} 대체`;
+    const lk = R.leaveKeys(inp);
+    o.reasonText = lk.length && lk.every(k => k === 'temporary' || k === 'expert')
+      ? `${(inp.target || '').trim() || '○○'} ${R.leaveLabel(inp)}`
+      : `${(inp.target || '').trim() || '○○○'} ○○○ 교사의 ${R.leaveLabel(inp)} 대체`;
+    o.related = R.legalBasis(inp).join('\n');
     o.round = inp.noticeStage === 'none' ? '1차' : '2차';
     const expanded = ['gigan_2nd_expand', 'gangsa_2nd_expand', 'two_step'].includes(r.route) && o.round === '2차';
     o.expandText = expanded ? r.expansions.map(e => e.replace(/\(.*\)/, '').trim()).join(', ') : '';
@@ -57,10 +61,15 @@
   /* ---------- 채용 계획 기안(참고자료 2) ---------- */
   function planGian(f) {
     const b = [];
-    const rel = ['2026 계약제교원 운영 지침(경상북도교육청, 2026. 2.)'].concat((f.related || '').split('\n').map(s => s.trim()).filter(Boolean));
+    // 관련: 법령 → 지침 → 그 밖의 문서 순
+    const extra = (f.related || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const laws = extra.filter(t => /「[^」]*(법|령|규칙)」/.test(t)), others = extra.filter(t => !laws.includes(t));
+    const rel = laws.concat(['2026 계약제교원 운영 지침(경상북도교육청, 2026. 2.)'], others);
     b.push(L('L0', '1. 관련'));
     rel.forEach((t, i) => b.push(L('L1', `${LET[i]}. ${t}`)));
-    b.push(L('L0', `2. ${f.reasonText.replace(/ 대체$/, '')}에 따른 결원으로 다음과 같이 ${eul(f.typeLabel)} 채용하고자 합니다.`));
+    b.push(L('L0', /교사의 /.test(f.reasonText)
+      ? `2. ${f.reasonText.replace(/ 대체$/, '')}에 따른 결원으로 다음과 같이 ${eul(f.typeLabel)} 채용하고자 합니다.`
+      : `2. ${f.reasonText}을 위하여 다음과 같이 ${eul(f.typeLabel)} 채용하고자 합니다.`));
     b.push(L('L1', '가. 채용 개요'));
     b.push(L('L2', `1) 과목(담당): ${subj(f)}`));
     b.push(L('L2', `2) 채용 기간: ${periodText(f)}` + (f.months ? `(${f.months}개월)` : '')));
@@ -114,7 +123,9 @@
     push('BODY3', 'L2', '5) 심사영역 및 배점');
 
     push('BODY4', 'L2', `6) 심사결과 및 통보: 선발인원의 ${f.multiple || 3}배수 선발, 개별 통보(유선전화 및 문자)`);
-    push('BODY4', 'L2', `7) 서류심사 탈락자 제출 서류는 「채용절차의 공정화에 관한 법률 시행규칙」에 따라 최종 채용 여부가 확정된 날 이후 ${f.returnDays || 14}일 이내 채용서류 반환 청구가 없을 시 「개인정보 보호법」 제21조에 따라 폐기함`);
+    push('BODY4', 'L2', Number(f.returnDays) === 0
+      ? '7) 응시 서류는 전자우편으로만 접수하므로 「채용절차의 공정화에 관한 법률」 제11조제1항 단서에 따라 반환 대상이 아니며, 개인정보 보유기간이 지나면 「개인정보 보호법」 제21조에 따라 파기함'
+      : `7) 최종 채용 여부가 확정된 날 이후 ${f.returnDays || 14}일 이내에 「채용절차의 공정화에 관한 법률」에 따른 채용서류 반환 청구가 없으면 「개인정보 보호법」 제21조에 따라 파기함`);
     push('BODY4', 'L1', `나. 면접심사${f.demo ? '(및 수업실연)' : ''}`);
     push('BODY4', 'L2', '1) 대상: 서류심사 합격자');
     push('BODY4', 'L2', `2) 내용 및 방법: 기 제출한 자기소개서(직무수행계획, 업무추진실적 등)를 바탕으로 개인별 면접${f.demo ? ' 및 수업 시연' : ''} 실시`);
@@ -145,7 +156,7 @@
       ['면접심사', `${kd(f.interviewDate, true)} ${f.interviewTime || ''}`.trim(), ''],
       ['최종합격자 발표', kd(f.finalAnnounce, true), '개별 통지'],
       ['최종합격자 서류제출', `~ ${kd(f.submitEnd, true)}`, ''],
-      ['채용서류 반환', `최종합격자 발표 후 ${f.returnDays || 14}일 이내`, '청구 시'],
+      Number(f.returnDays) === 0 ? ['채용서류 반환', '해당 없음', '전자우편 접수'] : ['채용서류 반환', `채용 확정 후 ${f.returnDays || 14}일 이내`, '청구 시'],
     ] : [
       [f.method === 'pool' ? '인력풀 조회·대상자 선정' : '대상자 선정', kd(f.noticeDate, true), f.method === 'pool' ? '2배수 이상' : ''],
       ['면접(적부 심사)', `${kd(f.interviewDate, true)} ${f.interviewTime || ''}`.trim(), f.method === 'pool' ? '' : '인사자문위원회'],
@@ -206,7 +217,9 @@
     p('BODY2', 'NOTE', '※ 상기 일정은 진행 상황에 따라 변경될 수 있음');
     p('BODY2', 'L0', '');
     p('BODY2', 'L0', '6. 유의사항');
-    [`접수된 서류는 「채용절차의 공정화에 관한 법률」에 따라 응시자 본인이 채용서류 반환청구서를 작성·제출한 경우에 한하여 반환함. 단, 반환 청구는 최종합격자 발표 후 ${f.returnDays || 14}일 이내 가능하며, 반환 청구기간 이후에 반환되지 않은 서류는 파기합니다.`,
+    [Number(f.returnDays) === 0
+      ? '응시 서류는 전자우편으로만 접수하며, 「채용절차의 공정화에 관한 법률」 제11조제1항 단서에 따라 반환하지 않습니다. 제출된 서류는 개인정보 보유기간이 지나면 파기합니다.'
+      : `접수된 서류는 「채용절차의 공정화에 관한 법률」에 따라 응시자 본인이 채용서류 반환청구서를 작성·제출한 경우에 한하여 반환함. 단, 반환 청구는 최종합격자 발표(채용 여부 확정) 후 ${f.returnDays || 14}일 이내 가능하며, 반환 청구기간 이후에 반환되지 않은 서류는 파기합니다.`,
       '기재사항이 사실과 다르거나 허위로 작성된 경우는 합격을 취소합니다.',
       '제출서류의 기재 착오, 누락, 서류 미제출, 연락 불능 등으로 인한 불이익은 모두 응시자 책임으로 합니다.',
       '최종합격자로 발표된 이후에도 결격 사유가 있는 자는 합격을 취소하며, 기타 공고되지 아니한 사항은 우리 학교의 결정에 따릅니다.',

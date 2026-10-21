@@ -51,7 +51,27 @@
   $('#hobLoad').addEventListener('change', async e => {
     const file = e.target.files[0]; e.target.value = '';
     if (!file) return;
-    if (!/\.hwpx$/i.test(file.name)) { toast('hwpx 파일만 불러올 수 있습니다. 한글에서 "다른 이름으로 저장 → hwpx"로 저장해 주세요.'); return; }
+    const ext = (file.name.match(/\.([a-z]+)$/i) || [])[1] || '';
+    if (/^(hwp|xls)$/i.test(ext)) { toast(ext.toLowerCase() === 'hwp' ? '.hwp는 읽을 수 없습니다. 한글에서 "다른 이름으로 저장 → hwpx"로 저장하거나 PDF로 저장해 불러오세요.' : '예전 .xls는 읽을 수 없습니다. 엑셀에서 .xlsx로 저장하거나 PDF로 저장(인쇄)해 불러오세요.'); return; }
+    if (!/^(hwpx|xlsx|pdf)$/i.test(ext)) { toast('hwpx, xlsx, pdf 파일만 불러올 수 있습니다.'); return; }
+    const done = parsed => {
+      if (!parsed || !parsed.rows) { toast('호봉획정표 양식을 찾지 못했습니다. 이 도우미로 만든 파일이나 별지 제16호 서식인지 확인하세요.'); return; }
+      fillHob(parsed);
+      fHob.requestSubmit();
+      const miss = parsed.rows.filter(r => r.kind === 'custom').length;
+      toast(`불러왔습니다: 경력 ${parsed.rows.length}건${miss ? ` (경력 구분 확인 필요 ${miss}건)` : ''}. ${ext.toLowerCase() === 'pdf' ? '자격·학력·가감년수도 확인하세요.' : '고칠 부분을 수정한 뒤 다시 내려받으세요.'}`);
+    };
+    if (/xlsx/i.test(ext)) { try { done(await HobIO.parseXlsx(await file.arrayBuffer())); } catch (err) { console.error(err); toast('엑셀 파일을 읽지 못했습니다: ' + err.message); } return; }
+    if (/pdf/i.test(ext)) {
+      toast('PDF를 읽는 중입니다…');
+      try {
+        const o = await HobIO.parsePdf(await file.arrayBuffer());
+        if (o.error === 'scan') { toast('글자를 읽을 수 없는 PDF(스캔 이미지)입니다. 원본 파일을 PDF로 저장(인쇄)해서 불러오세요.'); return; }
+        if (!o.rows.length) { toast('PDF에서 경력 줄(시작일·종료일)을 찾지 못했습니다.'); return; }
+        done(o);
+      } catch (err) { console.error(err); toast('PDF를 읽지 못했습니다: ' + err.message); }
+      return;
+    }
     try {
       const zip = await JSZip.loadAsync(await file.arrayBuffer());
       const names = Object.keys(zip.files).filter(n => /^Contents\/section\d+\.xml$/.test(n)).sort();
@@ -65,10 +85,7 @@
       }
       const parsed = parseHobong(tables);
       if (parsed) { parsed.limit14 = /호봉상한제 적용 대상/.test(full); const rm = full.match(/호봉획정사유\s*:\s*([^\n]+)/); if (rm) parsed.reason = rm[1].trim(); }
-      if (!parsed) { toast('호봉획정표 양식을 찾지 못했습니다. 이 도우미로 만든 호봉획정표인지 확인하세요.'); return; }
-      fillHob(parsed);
-      fHob.requestSubmit();
-      toast(`불러왔습니다: 경력 ${parsed.rows.length}건. 고칠 부분을 수정한 뒤 다시 내려받으세요.`);
+      done(parsed);
     } catch (err) { console.error(err); toast('파일을 읽지 못했습니다: ' + err.message); }
   });
   const isoOf = t => { const m = String(t || '').match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/); return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : ''; };
@@ -126,8 +143,11 @@
     if (ei >= 0) { fHob.edu.value = ei; syncEdu(); }
     // 가감년수 = 학력 가감 + 기타 가감
     if (o.add !== undefined) fHob.adj.value = o.add - (Number(fHob.eduAdj.value) || 0);
-    // 기산호봉 = 사정호봉 − (18) 경력년수 (호봉상한제면 14 − (18))
-    if (o.grade && o.p18 !== undefined) {
+    // 자격 이름이 있으면(엑셀·PDF) 그것으로, 없으면 기산호봉 = 사정호봉 − (18) 경력년수 (hwpx)
+    const cn = o.certName ? Rules3.CERT.findIndex(([n]) => n === o.certName.replace(/\s/g, '')) : -1;
+    if (cn >= 0) { fHob.cert.value = cn; syncCert(); }
+    if (o.base) fHob.base.value = o.base;
+    if (!o.base && cn < 0 && o.grade && o.p18 !== undefined) {
       const base = o.grade - o.p18;   // 호봉상한제여도 (18) = 14 − 기산호봉으로 기록되므로 같은 식
       const ci = Rules3.CERT.findIndex(([n, b]) => b === base && (!o.proposed || o.proposed.replace(/\s/g, '').includes(n.replace(/정교사|교사/, ''))));
       const ci2 = ci >= 0 ? ci : Rules3.CERT.findIndex(([, b]) => b === base);
@@ -180,6 +200,15 @@
         limitText: inp.limit14 ? `※ 호봉상한제 적용 대상(연금수급자·명예퇴직·정년퇴직 교원): 14호봉 상한${r.capped ? ` → 산정 ${Number(inp.base) + r.p16.y}호봉을 14호봉으로 획정` : ''}` : '',
       },
     }, `${(inp.date || todayIso).replace(/-/g, '')}_호봉획정표`);
+  });
+
+  $('#hobXlsx').addEventListener('click', async () => {
+    const { inp, r } = calcHob();
+    try {
+      const blob = await HobIO.exportXlsx(inp, r, schoolVars().schoolName);
+      Hwpx.download(blob, `${(inp.date || todayIso).replace(/-/g, '')}_호봉획정표.xlsx`);
+      toast('엑셀 파일을 내려받았습니다. 노란 칸을 고치면 엑셀에서 다시 계산됩니다.');
+    } catch (e) { console.error(e); toast('엑셀 파일을 만들지 못했습니다: ' + e.message); }
   });
 
   /* =================== 근무실적 평가(서식 18) =================== */
@@ -330,7 +359,7 @@
     if (!r.error && !r.ok) toast('연장 계약 요건을 먼저 확인하세요. 불가 항목이 있습니다.');
     fJ.reset();
     fJ.target.value = inp.target || ''; fJ.start.value = inp.newStart; fJ.end.value = inp.newEnd; fJ.workStart.value = inp.newStart;
-    fJ.today.value = todayIso; fJ.noticeStage.value = 'none'; fJ.leaveType.value = 'leave';
+    fJ.today.value = todayIso; fJ.noticeStage.value = 'none'; window.App.setLeaveTypes(['leave']);
     fJ.extend.checked = true; fJ.hiredByExpansion.checked = inp.hiredBy === 'expand';
     fJ.requestSubmit();
     showTab('docs'); showSub(sub);

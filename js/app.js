@@ -50,9 +50,17 @@
   fJ.today.value = todayIso;
   function readJudge() {
     const o = {};
-    $$('input,select', fJ).forEach(el => { o[el.name] = el.type === 'checkbox' ? el.checked : el.value; });
+    $$('input,select', fJ).forEach(el => { if (el.name !== 'leaveTypes') o[el.name] = el.type === 'checkbox' ? el.checked : el.value; });
+    o.leaveTypes = $$('[name=leaveTypes]:checked', fJ).map(el => el.value);
     return o;
   }
+  function setLeaveTypes(keys) { $$('[name=leaveTypes]', fJ).forEach(el => { el.checked = keys.includes(el.value); }); lawPreview(); }
+  function lawPreview() {
+    const law = Rules.legalBasis({ leaveTypes: $$('[name=leaveTypes]:checked', fJ).map(el => el.value) });
+    $('#lawPreview').textContent = law.length ? '관련 법령: ' + law.join(' / ') : '';
+  }
+  fJ.addEventListener('change', e => { if (e.target.name === 'leaveTypes') lawPreview(); });
+  lawPreview();
   fJ.addEventListener('submit', e => {
     e.preventDefault();
     const inp = readJudge();
@@ -62,7 +70,7 @@
     renderSteps(r, inp);
     if (r.ok !== false || r.route) { fillDocForm(r, inp); fillHire(r, inp); }
   });
-  fJ.addEventListener('reset', () => setTimeout(() => { fJ.today.value = todayIso; }, 0));
+  fJ.addEventListener('reset', () => setTimeout(() => { fJ.today.value = todayIso; lawPreview(); }, 0));
 
   const LV = { ok: '가능', info: '참고', warn: '주의', block: '불가' };
   function refBtns(ref) {
@@ -85,6 +93,7 @@
           <div class="fact"><div class="k">공고</div><div class="v">${h(R.notice || '')}</div></div>
           <div class="fact"><div class="k">심의</div><div class="v">${h(R.committee || '')}</div></div>
           ${r.age !== undefined ? `<div class="fact"><div class="k">근무 시작일 기준 나이</div><div class="v">만 ${r.age}세 <span class="muted">(상한 ${r.ageBase}세)</span></div></div>` : ''}
+          ${r.legal && r.legal.length ? `<div class="fact" style="grid-column:1/-1"><div class="k">결원 사유 · 관련 법령</div><div class="v small">${h(r.leaveLabel)} — ${h(r.legal.join(' / '))}</div></div>` : ''}
           ${r.expanded ? `<div class="fact"><div class="k">자격 확대 사유</div><div class="v">${h(r.expansions.join(', '))}</div></div>` : ''}
         </div>
       </div>
@@ -199,6 +208,9 @@
     const o = Docs2.hireDefaults(r, inp);
     ['typeLabel', 'cStart', 'cEnd', 'reasonText', 'round', 'expandText', 'method', 'certReq', 'noticeDate', 'recvEnd', 'docAnnounce', 'interviewDate', 'finalAnnounce', 'submitEnd', 'retiredYN', 'retireKind']
       .forEach(k => { if (fH[k] && o[k] !== undefined) fH[k].value = o[k]; });
+    // 관련 문서: 결원 사유별 법령으로 바꾸고, 직접 적은 다른 문서는 유지
+    const keep = fH.related.value.split('\n').map(x => x.trim()).filter(x => x && !/「교육공무원(법|임용령)」 제(32|13)조/.test(x));
+    fH.related.value = [o.related].concat(keep).filter(Boolean).join('\n');
     if (inp.retireDate) fH.retireDate.value = inp.retireDate;
     if (inp.target && !fH.subject.value) fH.subject.value = inp.target.replace(/교사$/, '');
     fH.noticeCount.value = o.method === 'notice' ? (o.round === '2차' ? '2' : '1') : '0';
@@ -215,8 +227,22 @@
     o.schoolName = schoolVars().schoolName; o.tel = schoolVars().tel;
     o.mid = lastInput && lastInput.schoolLevel === 'mid';
     if (!o.recvPlace) o.recvPlace = o.schoolName + ' 행정실';
+    o.recvMethod = [o.recvVisit && '방문접수', o.recvPost && '우편접수', o.recvEmail && '이메일접수'].filter(Boolean).join(', ') || '이메일접수';
+    o.emailOnly = !!o.recvEmail && !o.recvVisit && !o.recvPost;
+    o.returnDays = o.emailOnly ? 0 : (Number(o.returnDays) || 14);
     return o;
   }
+  // 접수 방법이 이메일뿐이면 채용서류 반환 대상이 아님(채용절차법 제11조제1항 단서)
+  function syncReturn() {
+    const emailOnly = fH.recvEmail.checked && !fH.recvVisit.checked && !fH.recvPost.checked;
+    const sel = fH.returnDays, zero = [...sel.options].find(o => o.value === '0');
+    zero.disabled = !emailOnly;
+    if (emailOnly) sel.value = '0'; else if (sel.value === '0') sel.value = '14';
+    sel.disabled = emailOnly;
+    $('#returnHint').textContent = emailOnly ? '전자우편으로 받은 서류는 반환 대상이 아닙니다(채용절차법 제11조제1항 단서)' : '채용 확정일 이후 14~180일에서 학교가 정함(채용절차법 제11조)';
+  }
+  ['recvVisit', 'recvPost', 'recvEmail'].forEach(k => fH[k].addEventListener('change', syncReturn));
+  syncReturn();
   const HDOC = {
     planGian: f => ({ tpl: 'gian', data: Docs2.planGian(f), name: '채용계획 기안' }),
     plan: f => { const d = Docs2.planDoc(f); return { tpl: d.template, data: d, name: '채용 계획' }; },
@@ -319,5 +345,5 @@
   function qaHit(x, terms) {
     return `<div class="hit"><div class="src">Q&amp;A ${x.no} · ${h(x.section)}</div><div class="q">Q. ${mark(x.q, terms)}</div>${x.a.map(a => `<p>${mark(a, terms)}</p>`).join('')}</div>`;
   }
-  window.App = { schoolVars, toast, showTab, showSub, refBtns, h, todayIso, fJ };
+  window.App = { schoolVars, toast, showTab, showSub, refBtns, h, todayIso, fJ, setLeaveTypes };
 })();

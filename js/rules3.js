@@ -45,12 +45,19 @@
     { k: 'custom', label: '직접 입력', rate: null, ref: '' },
   ];
   // 시작~종료(포함) 달력 기간 → {y, m, d}
+  //   민법 제160조: k개월 기간은 기산일에 해당하는 날의 전날 끝나고, 해당하는 날이 없으면 그 달 말일에 끝남
+  //   개월 = 그 끝나는 날이 종료일을 넘지 않는 최대 k, 일 = 종료일 − k개월 끝나는 날 (엑셀 저장본 수식과 같음)
+  function edate(s, k) {
+    const y = s.getFullYear(), m = s.getMonth() + k;
+    const last = new Date(y, m + 1, 0).getDate();
+    return new Date(y, m, Math.min(s.getDate(), last), 12);
+  }
+  const pend = (s, k) => { const x = edate(s, k); return x.getDate() === s.getDate() ? addDays(x, -1) : x; };
   function ymd(s, e) {
-    const end = addDays(e, 1);
-    let y = end.getFullYear() - s.getFullYear(), m = end.getMonth() - s.getMonth(), d = end.getDate() - s.getDate();
-    if (d < 0) { m--; d += new Date(end.getFullYear(), end.getMonth(), 0).getDate(); }
-    if (m < 0) { y--; m += 12; }
-    return { y, m, d };
+    const e1 = addDays(e, 1);
+    let k = (e1.getFullYear() - s.getFullYear()) * 12 + e1.getMonth() - s.getMonth();
+    if (pend(s, k) > e) k--;
+    return { y: Math.floor(k / 12), m: k % 12, d: diffDays(pend(s, k), e) };
   }
   const toD = p => p.y * 360 + p.m * 30 + p.d;                 // 1년=360일, 1월=30일
   const fromD = n => { n = Math.max(0, Math.floor(n)); return { y: Math.floor(n / 360), m: Math.floor((n % 360) / 30), d: n % 30 }; };
@@ -214,6 +221,6 @@
     return { eligible: true, amount: Math.floor(Math.min(40, hoursPerWeek) / 40 * 8 * rate) };
   }
 
-  const api = { CERT, EDU, CAREER, baseHoursFor, hobong, ymd, fmt, extend, JG_RATE, jeonggeun, severance, weeklyHoliday };
+  const api = { CERT, EDU, CAREER, baseHoursFor, hobong, ymd, edate, toD, fromD, fmt, extend, JG_RATE, jeonggeun, severance, weeklyHoliday };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Rules3 = api;
 })(this);

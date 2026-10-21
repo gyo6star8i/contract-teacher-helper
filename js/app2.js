@@ -65,7 +65,7 @@
   }));
   $('#btnLeaveReplace').addEventListener('click', () => {
     const x = leaveData(); if (!x) return;
-    fJ.leaveType.value = 'leave';
+    window.App.setLeaveTypes(['leave']);
     fJ.start.value = x.f.lStart; fJ.end.value = Rules.iso(x.r.effEnd);
     if (x.f.subject) fJ.target.value = x.f.subject;
     fJ.birth.value = ''; fJ.retire.value = ''; fJ.extend.checked = false;
