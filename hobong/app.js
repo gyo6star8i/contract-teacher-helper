@@ -77,7 +77,7 @@
       eduText: eduName + ($('#special').checked ? ' (특수)' : ''), sabeom: $('#sabeom').checked, writerPos: $('#wPos').value, writerName: $('#wName').value,
       checkerPos: $('#cPos').value, checkerName: $('#cName').value, contract: $('#reason').value === '계약제 교원 임용' };
     try {
-      const blob = await window.HobongXlsx.exportXlsx(info, last, getState());
+      const blob = await window.HobongXlsx.exportXlsx(info, last);
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileBase() + '.xlsx'; a.click();
     } catch (e) { alert('엑셀 저장 실패: ' + e.message); }
   };
@@ -91,13 +91,7 @@
   $('#importJson').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
     try {
-      if (/\.json$/i.test(f.name)) applyState(JSON.parse(await f.text()));
-      else {
-        const res = await window.HobongXlsx.importXlsx(await f.arrayBuffer());
-        applyState(res.state);
-        $('#status').textContent = '';
-        alert(res.type === 'own' ? '저장했던 호봉획정표를 그대로 불러왔습니다.' : `기존 호봉획정표에서 기본 정보와 경력 ${res.state.rows.length}건을 불러왔습니다.\n경력 구분·환산율·학력을 한 번 확인하세요.`);
-      }
+      applyState(JSON.parse(await f.text()));
     } catch (err) { alert('불러오기 실패: ' + err.message); }
     e.target.value = '';
   };

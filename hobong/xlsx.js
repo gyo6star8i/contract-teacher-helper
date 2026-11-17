@@ -1,6 +1,5 @@
-/* 호봉획정표 엑셀(.xlsx) 저장·불러오기 — 브라우저 안에서만 처리(JSZip)
- *  - 저장: [별지] 호봉획정표 모양 + 계산 수식, 숨김 시트 'data'에 입력값(JSON)을 넣어 그대로 다시 불러올 수 있게 함
- *  - 불러오기: ① 이 도구가 만든 .xlsx ② 학교에서 쓰던 호봉획정표.xlsm/.xlsx(정광선 님 양식)
+/* 호봉획정표 엑셀(.xlsx) 저장 — 브라우저 안에서만 처리(JSZip)
+ *  - 저장 전용: [별지] 호봉획정표 모양 + 계산 수식 (엑셀 파일 불러오기는 개인정보 보호를 위해 두지 않음)
  */
 (function (root) {
   'use strict';
@@ -8,7 +7,6 @@
   const COLS = 'ABCDEFGHIJKLMN'.split('');
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const serial = d => Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 86400000);
-  const fromSerial = n => { const t = new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000); return new Date(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate(), 12); };
 
   const S = { txt: 1, head: 2, dateIn: 3, pctIn: 4, txtIn: 5, title: 6, plain: 7, num: 8, grade: 9, years: 10, date: 11, leftIn: 12, numIn: 13, small: 14 };
   const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -83,8 +81,8 @@ ${merges.length ? `<mergeCells count="${merges.length}">${merges.map(m => `<merg
   }
 
   /* info = { reason, org, name, certName, pos, curGrade, eduText, sabeom, writerPos, writerName, checkerPos, checkerName, contract }
-   * r = Hobong.calc 결과, state = 다시 불러올 입력값(JSON) */
-  async function exportXlsx(info, r, state) {
+   * r = Hobong.calc 결과 */
+  async function exportXlsx(info, r) {
     const sh = Sheet();
     const rows = r.valid, N = Math.max(12, rows.length);
     sh.set('A1', { v: '호봉획정표', s: S.plain });
@@ -159,7 +157,7 @@ ${merges.length ? `<mergeCells count="${merges.length}">${merges.map(m => `<merg
     sh.merge(`A${B0}:B${B0}`, S.head).set(`A${B0}`, { v: '기산호봉' });
     sh.set(`C${B0}`, { v: r.base, s: S.numIn });
     sh.merge(`D${B0}:E${B0}`, S.head).set(`D${B0}`, { v: '호봉상한제(Y/N)' });
-    sh.set(`F${B0}`, { v: r.capped || (state && state.form && state.form.limit14) ? 'Y' : 'N', s: S.txtIn });
+    sh.set(`F${B0}`, { v: r.capped ? 'Y' : 'N', s: S.txtIn });
     sh.merge(`G${B0}:H${B0}`, S.head).set(`G${B0}`, { v: '40호봉 초과' });
     sh.merge(`I${B0}:K${B0}`, S.txt).set(`I${B0}`, { f: `IF(G${V}>40,"40호봉 + 근속가봉 "&(G${V}-40),"-")`, v: r.grade > 40 ? `40호봉 + 근속가봉 ${r.grade - 40}` : '-' });
 
@@ -181,109 +179,19 @@ ${merges.length ? `<mergeCells count="${merges.length}">${merges.map(m => `<merg
     sh.merge(`A${N1}:K${N1}`, S.small).set(`A${N1}`, { v: '※ 노란 칸을 고치면 다시 계산됩니다. 경력년수는 년·월·일(1년=12월, 1월=30일), 환산년수 = 경력기간 × 환산율(일 미만 버림). 같은 기간에 겹치는 경력은 유리한 것 하나만 인정(비고 "중복기간 제외" 줄은 값으로 기록). 근거: 공무원보수규정 제8조·별표22·23·25.' });
     sh.heights[N1] = 40;
 
-    // 숨김 시트: 다시 불러오기용 입력값
-    const data = Sheet();
-    data.set('A1', { v: 'HOBONG_STATE_V1' });
-    const js = JSON.stringify(state || {});
-    for (let i = 0, k = 2; i < js.length; i += 30000, k++) data.set('A' + k, { v: js.slice(i, i + 30000) });
-
     const zip = new JSZip();
     zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`);
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`);
     zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
     zip.file('xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="호봉획정표" sheetId="1" r:id="rId1"/><sheet name="data" sheetId="2" state="veryHidden" r:id="rId3"/></sheets><definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">호봉획정표!$A$1:$K$${N1}</definedName></definedNames><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets><sheet name="호봉획정표" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">호봉획정표!$A$1:$K$${N1}</definedName></definedNames><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
     zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>`);
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
     zip.file('xl/styles.xml', STYLES);
     zip.file('xl/worksheets/sheet1.xml', sh.xml([11, 11, 20, 4.5, 4.5, 4.5, 7, 4.5, 4.5, 4.5, 18, 8, 8, 6], [11, 12, 13]));
-    zip.file('xl/worksheets/sheet2.xml', data.xml([60], []));
     return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', compression: 'DEFLATE' });
   }
 
-  /* ---------- 불러오기 ---------- */
-  async function readCells(buf) {
-    const zip = await JSZip.loadAsync(buf);
-    const parse = async p => (zip.file(p) ? new DOMParser().parseFromString(await zip.file(p).async('string'), 'application/xml') : null);
-    const T = (el, n) => [...el.getElementsByTagNameNS('*', n)];
-    const ssDoc = await parse('xl/sharedStrings.xml');
-    const ss = ssDoc ? T(ssDoc, 'si').map(si => T(si, 't').map(t => t.textContent).join('')) : [];
-    const wb = await parse('xl/workbook.xml'), rels = await parse('xl/_rels/workbook.xml.rels');
-    const sheets = {};
-    for (const sh of T(wb, 'sheet')) {
-      const rid = sh.getAttribute('r:id') || sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
-      const rel = rels && T(rels, 'Relationship').find(x => x.getAttribute('Id') === rid);
-      if (!rel) continue;
-      const doc = await parse('xl/' + rel.getAttribute('Target').replace(/^\/?xl\//, '').replace(/^\//, ''));
-      if (!doc) continue;
-      const cell = {};
-      T(doc, 'c').forEach(c => {
-        const t = c.getAttribute('t'), v = T(c, 'v')[0], is = T(c, 'is')[0];
-        let val = '';
-        if (t === 's') val = ss[Number(v && v.textContent)] || '';
-        else if (t === 'inlineStr') val = is ? T(is, 't').map(x => x.textContent).join('') : '';
-        else if (t === 'str' || t === 'e') val = v ? v.textContent : '';
-        else if (t === 'b') val = v ? v.textContent === '1' : '';
-        else if (v) val = Number(v.textContent);
-        cell[c.getAttribute('r')] = val;
-      });
-      sheets[sh.getAttribute('name')] = cell;
-    }
-    return sheets;
-  }
-
-  // 원본 엑셀 양식의 코드표
-  const OLD_CERT = { 1: '정교사(1급)', 2: '정교사(2급)', 3: '보건교사(1급)', 4: '보건교사(2급)', 5: '정교사(1급)', 6: '정교사(2급)', 7: '준교사', 8: '영양교사(1급)', 9: '영양교사(2급)', 10: '교장·원장·교감·원감', 11: '정교사(1급)', 12: '사서교사(2급)', 13: '실기교사', 14: '준교사', 15: '교육장·장학관·교육연구관', 16: '교육장·장학관·교육연구관', 17: '교육장·장학관·교육연구관', 18: '장학사·교육연구사', 19: '장학사·교육연구사', 20: '교장·원장·교감·원감' };
-  const OLD_EDU = { 1: [16, true], 2: [14, true], 3: [16, true], 4: [14, true], 5: [16, false], 6: [15, false], 7: [14, false], 8: [13, false], 9: [12, false], 10: [11, false], 11: [10, false], 12: [9, false] };
-
-  async function importXlsx(buf) {
-    const sheets = await readCells(buf);
-    // ① 이 도구가 만든 파일
-    const d = sheets.data;
-    if (d && d.A1 === 'HOBONG_STATE_V1') {
-      let js = '', k = 2;
-      while (d['A' + k] !== undefined && d['A' + k] !== '') js += d['A' + k++];
-      return { type: 'own', state: JSON.parse(js) };
-    }
-    // ② 학교 호봉획정표.xlsm 양식(정광선 님): 첫 시트, 경력 13~33행
-    const c = Object.values(sheets)[0] || {};
-    const g = ref => (c[ref] === undefined ? '' : c[ref]);
-    const ds = v => (typeof v === 'number' && v > 0 ? H.iso(fromSerial(v)) : (H.D(v) ? H.iso(H.D(v)) : ''));
-    if (!Object.values(c).some(v => typeof v === 'string' && /호\s*봉\s*획\s*정\s*표/.test(v))) throw new Error('호봉획정표 양식이 아닙니다.');
-    const certIdx = H.CERT.findIndex(x => x[0] === OLD_CERT[g('C1')]);
-    const edu = OLD_EDU[g('H1')] || [16, true];
-    const isSpecial = [5, 6, 7].includes(Number(g('C1')));
-    const form = {
-      reason: String(g('D3') || ''), org: String(g('C4') || ''), name: String(g('C5') || ''), pos: String(g('O5') || ''),
-      curGrade: g('O6') === '' ? '' : String(g('O6')), cert: String(certIdx >= 0 ? certIdx : 0), edu: String(edu[0]), sabeom: edu[1], special: isSpecial,
-      date: ds(g('K36')), limit14: Number(g('U27')) === 1, pre97: Number(g('L1')) === 1,
-      wPos: String(g('E37') || ''), wName: String(g('I37') || ''), cPos: String(g('E41') || ''), cName: String(g('I41') || ''),
-    };
-    const rows = [];
-    for (let r = 13; r <= 33; r++) {
-      const s = ds(g('A' + r)), e = ds(g('D' + r));
-      if (!s || !e) continue;
-      const content = String(g('G' + r) || '').trim(), note = String(g('Q' + r) || '').trim();
-      let rate = g('M' + r);
-      const hourMode = /주당\s*\d+\s*시간/.test(note);
-      if (typeof rate === 'number' && !hourMode) rate = rate <= 1 ? Math.round(rate * 1000) / 10 : rate;
-      else rate = '';
-      let kind = root.Ocr ? root.Ocr.classify(content + ' ' + note) : 'teacher';
-      if (/석사|박사|대학원/.test(note)) kind = 'grad';
-      if (hourMode) { kind = 'gangsa'; }
-      const baseH = hourMode ? Number((note.match(/주당\s*(\d+)\s*시간/) || [])[1]) || '' : '';
-      const def = (H.KIND[kind] || {}).rate;
-      if (rate !== '' && kind !== 'gangsa' && def !== rate) { kind = 'custom'; }
-      rows.push({ start: s, end: e, content, kind, rate: kind === 'custom' ? rate : '', weekly: '', totalHours: hourMode && typeof g('M' + r) === 'number' ? g('M' + r) : '', baseHours: baseH, mismatch: false, note });
-    }
-    // 시간강사(비연속, 10~12행): 총 시간만 있는 줄
-    for (let r = 10; r <= 12; r++) {
-      const hrs = g('J' + r), basis = String(g('Q' + r) || '');
-      if (typeof hrs === 'number' && hrs > 0) rows.push({ start: '', end: '', content: String(g('A' + r) || '시간강사(비연속)'), kind: 'custom', rate: '', weekly: '', totalHours: hrs, mismatch: false, note: `총 ${hrs}시간 ${basis} — 기간·환산율 직접 확인` });
-    }
-    return { type: 'legacy', state: { v: 1, form, rows } };
-  }
-
-  root.HobongXlsx = { exportXlsx, importXlsx };
+  root.HobongXlsx = { exportXlsx };
 })(typeof self !== 'undefined' ? self : this);
