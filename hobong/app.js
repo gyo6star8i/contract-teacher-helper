@@ -157,11 +157,17 @@
     <tr><th>확인자 직위(급)</th><td>${esc($('#cPos').value)}</td><th>성명</th><td style="height:34px">${esc($('#cName').value)} <span style="float:right">(인)</span></td></tr></table>
     <p style="font-size:8.5pt;margin-top:6px">근거: 공무원보수규정 제8조·별표22·23·25, 교육공무원 호봉획정시 경력환산율표의 적용 등에 관한 예규 · 경력기간 1년=12월, 1월=30일 환산, 일 미만 버림</p>`;
   }
-  // 파일명: 학교명(줄임)-저장일(YYMMDD), 예) 구미초-261117 — 개인정보(성명)는 넣지 않음
+  // 파일명: 붙임-호봉획정표(이○동) — 성명 가운데 글자를 ○로 가림
+  function maskName(n) {
+    n = String(n || '').replace(/\s+/g, '');
+    if (!n) return '';
+    if (n.length === 1) return n;
+    if (n.length === 2) return n[0] + '○';
+    return n[0] + '○'.repeat(n.length - 2) + n[n.length - 1];
+  }
   function fileBase() {
-    const org = $('#org').value.replace(/\s+/g, '').replace(/초등학교$/, '초').replace(/중학교$/, '중').replace(/고등학교$/, '고').replace(/유치원$/, '유');
-    const t = new Date(), ymd = String(t.getFullYear()).slice(2) + String(t.getMonth() + 1).padStart(2, '0') + String(t.getDate()).padStart(2, '0');
-    return [org || '호봉획정표', ymd].join('-').replace(/[\\/:*?"<>|]/g, '');
+    const m = maskName($('#name').value);
+    return ('붙임-호봉획정표' + (m ? `(${m})` : '')).replace(/[\\/:*?"<>|]/g, '');
   }
   $('#print').onclick = () => {
     const t = document.title;
