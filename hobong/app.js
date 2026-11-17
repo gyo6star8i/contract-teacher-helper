@@ -157,11 +157,11 @@
     <tr><th>확인자 직위(급)</th><td>${esc($('#cPos').value)}</td><th>성명</th><td style="height:34px">${esc($('#cName').value)} <span style="float:right">(인)</span></td></tr></table>
     <p style="font-size:8.5pt;margin-top:6px">근거: 공무원보수규정 제8조·별표22·23·25, 교육공무원 호봉획정시 경력환산율표의 적용 등에 관한 예규 · 경력기간 1년=12월, 1월=30일 환산, 일 미만 버림</p>`;
   }
-  // 파일명: 학교명(줄임)-성명, 예) 구미초-홍길동
+  // 파일명: 학교명(줄임)-저장일(YYMMDD), 예) 구미초-261117 — 개인정보(성명)는 넣지 않음
   function fileBase() {
     const org = $('#org').value.replace(/\s+/g, '').replace(/초등학교$/, '초').replace(/중학교$/, '중').replace(/고등학교$/, '고').replace(/유치원$/, '유');
-    const nm = $('#name').value.trim();
-    return ([org, nm].filter(Boolean).join('-') || '호봉획정표').replace(/[\\/:*?"<>|]/g, '');
+    const t = new Date(), ymd = String(t.getFullYear()).slice(2) + String(t.getMonth() + 1).padStart(2, '0') + String(t.getDate()).padStart(2, '0');
+    return [org || '호봉획정표', ymd].join('-').replace(/[\\/:*?"<>|]/g, '');
   }
   $('#print').onclick = () => {
     const t = document.title;
