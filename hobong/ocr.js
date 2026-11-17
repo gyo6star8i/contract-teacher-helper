@@ -47,18 +47,33 @@
 - 주민등록번호, 주소, 전화번호 등 개인 식별 정보는 절대 출력하지 마세요.
 - 경력 기간이 없으면 [] 로 답하세요.`;
 
-  async function gemini(files, key, model) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // 503(과부하)·429(한도)·500은 잠시 후 재시도, 그래도 안 되면 다른 무료 모델로 전환
+  const FALLBACK = ['gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'];
+  async function gemini(files, key, model, onStatus) {
     if (!key) throw new Error('Gemini API 키를 입력하세요.');
     const parts = [{ text: PROMPT }];
     for (const f of files) parts.push({ inline_data: { mime_type: f.type || 'image/png', data: await toB64(f) } });
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model || 'gemini-flash-latest')}:generateContent`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } }),
-    });
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(`Gemini 오류(${res.status}): ${(j.error && j.error.message) || res.statusText}`);
+    const body = JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } });
+    const models = [...new Set([model || FALLBACK[0], ...FALLBACK])];
+    let j = null, lastErr = '';
+    outer:
+    for (const m of models) {
+      for (let t = 0; t < 3; t++) {
+        onStatus && onStatus(`${m} 모델로 인식 중…${t ? ` (재시도 ${t})` : ''}`);
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body,
+        }).catch(e => ({ ok: false, status: 0, json: async () => ({ error: { message: e.message } }) }));
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) { j = data; break outer; }
+        lastErr = `${m}: ${res.status} ${(data.error && data.error.message) || ''}`;
+        if (res.status === 400 || res.status === 401 || res.status === 403) throw new Error(`Gemini 오류(${res.status}): ${(data.error && data.error.message) || ''}\n키가 올바른지 확인하세요.`);
+        if (res.status === 404) break;                       // 없는 모델 → 다음 모델
+        if ([429, 500, 502, 503, 504, 0].includes(res.status)) { await sleep(t === 0 ? 2000 : 5000); continue; }
+        break;
+      }
+    }
+    if (!j) throw new Error('Google 서버가 바쁘거나 무료 한도를 넘었습니다. 1~2분 뒤 다시 누르거나 "브라우저 OCR"을 써 보세요.\n(' + lastErr + ')');
     const txt = ((((j.candidates || [])[0] || {}).content || {}).parts || []).map(p => p.text || '').join('');
     let arr;
     try { arr = JSON.parse(txt.replace(/^```(json)?|```$/g, '').trim()); } catch (e) { throw new Error('AI 응답을 해석하지 못했습니다: ' + txt.slice(0, 200)); }

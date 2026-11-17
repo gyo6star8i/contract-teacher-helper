@@ -189,7 +189,7 @@
     $('#status').textContent = '인식 중…';
     try {
       let res;
-      if (mode === 'ai') { rememberKey(); res = await O.gemini(images, $('#apiKey').value.trim(), $('#model').value.trim()); }
+      if (mode === 'ai') { rememberKey(); res = await O.gemini(images, $('#apiKey').value.trim(), $('#model').value.trim(), s => { $('#status').textContent = s; }); }
       else { const t = await O.tesseract(images, s => { $('#status').textContent = 'OCR: ' + s; }); res = t.rows; if (!res.length) $('#status').textContent = '날짜 기간을 찾지 못했습니다. 인식된 글자:\n' + t.text.slice(0, 600); }
       cands = res.map(c => ({ ...blank(), ...c, rate: '' }));
       showCands();
