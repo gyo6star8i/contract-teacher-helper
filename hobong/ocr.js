@@ -11,6 +11,18 @@
     s.src = src; s.onload = ok; s.onerror = () => no(new Error('스크립트를 불러오지 못했습니다: ' + src));
     document.head.appendChild(s);
   });
+  // 이미지는 긴 변 1600px·JPEG로 줄여 보냄(속도↑, 글자 판독에는 충분)
+  async function shrink(file) {
+    if (!/^image\//.test(file.type)) return { mime: file.type || 'application/pdf', data: await toB64(file) };
+    try {
+      const bmp = await createImageBitmap(file);
+      const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+      return { mime: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.88).split(',')[1] };
+    } catch (e) { return { mime: file.type || 'image/png', data: await toB64(file) }; }
+  }
   const toB64 = file => new Promise((ok, no) => {
     const r = new FileReader();
     r.onload = () => ok(String(r.result).split(',')[1]);
@@ -54,20 +66,27 @@
   async function gemini(files, key, model, onStatus) {
     if (!key) throw new Error('Gemini API 키를 입력하세요.');
     const parts = [{ text: PROMPT }];
-    for (const f of files) parts.push({ inline_data: { mime_type: f.type || 'image/png', data: await toB64(f) } });
-    const body = JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } });
+    for (const f of files) { const x = await shrink(f); parts.push({ inline_data: { mime_type: x.mime, data: x.data } }); }
+    // 생각(thinking) 최소화: Gemini 3 계열은 기본이 high라 느림 → minimal, 2.5 계열은 thinkingBudget 0
+    const think = m => (/2\.5/.test(m) ? { thinkingBudget: /pro/.test(m) ? 128 : 0 } : /pro/.test(m) ? { thinkingLevel: 'low' } : { thinkingLevel: 'minimal' });
+    const bodyFor = (m, withThink) => JSON.stringify({ contents: [{ role: 'user', parts }],
+      generationConfig: Object.assign({ temperature: 0, responseMimeType: 'application/json' }, withThink ? { thinkingConfig: think(m) } : {}) });
+    const t0 = Date.now();
+    const sec = () => ((Date.now() - t0) / 1000).toFixed(1) + '초';
     const models = [...new Set([model || FALLBACK[0], ...FALLBACK])];
     let j = null, lastErr = '';
     outer:
     for (const m of models) {
+      let withThink = true;
       for (let t = 0; t < 2; t++) {
-        onStatus && onStatus(`${m} 모델로 인식 중…${t ? ` (재시도 ${t})` : ''}`);
+        onStatus && onStatus(`${m} 모델로 인식 중…${t ? ` (재시도 ${t})` : ''} · ${sec()}`);
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body,
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: bodyFor(m, withThink),
         }).catch(e => ({ ok: false, status: 0, json: async () => ({ error: { message: e.message } }) }));
         const data = await res.json().catch(() => ({}));
-        if (res.ok) { j = data; break outer; }
+        if (res.ok) { j = data; j._model = m; break outer; }
         lastErr = `${m}: ${res.status} ${(data.error && data.error.message) || ''}`;
+        if (res.status === 400 && withThink && /think/i.test(lastErr)) { withThink = false; t--; continue; }   // 생각 설정 미지원 모델
         if (res.status === 400 || res.status === 401 || res.status === 403) throw new Error(`Gemini 오류(${res.status}): ${(data.error && data.error.message) || ''}\n키가 올바른지 확인하세요.`);
         if (res.status === 404) break;                       // 없는 모델 → 다음 모델
         if ([429, 500, 502, 503, 504, 0].includes(res.status)) { if (t === 0) { await sleep(1500); continue; } break; }
@@ -79,6 +98,8 @@
     let arr;
     try { arr = JSON.parse(txt.replace(/^```(json)?|```$/g, '').trim()); } catch (e) { throw new Error('AI 응답을 해석하지 못했습니다: ' + txt.slice(0, 200)); }
     if (!Array.isArray(arr)) arr = arr.items || arr.careers || [];
+    onStatus && onStatus(`${j._model} · ${sec()} 걸림`);
+    gemini.last = { model: j._model, time: sec() };
     return arr.map(a => {
       const content = [a.org, a.position].filter(Boolean).join(' ').trim();
       const cat = a.category || '';

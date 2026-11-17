@@ -232,14 +232,17 @@
   $('#runOcr').onclick = async () => {
     const btn = $('#runOcr'); btn.disabled = true;
     $('#status').textContent = '인식 중…';
+    const t0 = Date.now(); let base = '인식 중…';
+    const tick = setInterval(() => { $('#status').textContent = base.replace(/ · [\d.]+초$/, '') + ` · ${((Date.now() - t0) / 1000).toFixed(0)}초`; }, 1000);
     try {
       let res;
-      if (mode === 'ai') { rememberKey(); res = await O.gemini(images, $('#apiKey').value.trim(), $('#model').value.trim(), s => { $('#status').textContent = s; }); }
-      else { const t = await O.tesseract(images, s => { $('#status').textContent = 'OCR: ' + s; }); res = t.rows; if (!res.length) $('#status').textContent = '날짜 기간을 찾지 못했습니다. 인식된 글자:\n' + t.text.slice(0, 600); }
+      if (mode === 'ai') { rememberKey(); res = await O.gemini(images, $('#apiKey').value.trim(), $('#model').value.trim(), st => { base = st; $('#status').textContent = st; }); }
+      else { const t = await O.tesseract(images, st => { base = 'OCR: ' + st; $('#status').textContent = base; }); res = t.rows; if (!res.length) $('#status').textContent = '날짜 기간을 찾지 못했습니다. 인식된 글자:\n' + t.text.slice(0, 600); }
       cands = res.map(c => ({ ...blank(), ...c }));
       showCands();
-      if (res.length) $('#status').textContent = `경력 ${res.length}건을 찾았습니다. 날짜·구분을 확인하고 추가하세요.`;
+      if (res.length) $('#status').textContent = `경력 ${res.length}건을 찾았습니다${mode === 'ai' && O.gemini.last ? ` (${O.gemini.last.model}, ${O.gemini.last.time})` : ''}. 날짜·구분을 확인하고 추가하세요.`;
     } catch (e) { $('#status').textContent = '오류: ' + e.message + (mode === 'ai' ? '\n(키·모델명을 확인하거나 "브라우저 OCR"을 써 보세요.)' : ''); }
+    clearInterval(tick);
     btn.disabled = false;
   };
   function showCands() {
