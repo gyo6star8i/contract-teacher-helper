@@ -98,6 +98,13 @@ footer{max-width:1180px;margin:0 auto;padding:4px 16px 30px;color:var(--sub);fon
     <label class="f">추가 가감년수(특별승급·승급제한 등, 년) <input type="number" id="extraAdj" value="0" step="1"></label>
   </div>
   <div class="hint" id="eduWhy" style="margin-top:6px"></div>
+  <h3 style="font-size:15px;margin:14px 0 6px">작성자·확인자 <span class="hint">호봉획정표 하단에 들어갑니다</span></h3>
+  <div class="grid">
+    <label class="f">작성자 직위(급) <input id="wPos" placeholder="교감"></label>
+    <label class="f">작성자 성명 <input id="wName"></label>
+    <label class="f">확인자 직위(급) <input id="cPos" placeholder="교장"></label>
+    <label class="f">확인자 성명 <input id="cName"></label>
+  </div>
   <div class="grid" style="margin-top:10px">
     <label class="chk"><input type="checkbox" id="limit14"> 호봉상한제 14호봉(퇴직연금 수령·명예·정년퇴직자 계약제 임용)</label>
     <label class="chk"><input type="checkbox" id="pre97"> 1997. 1. 1. 이전 획정(잔여 15일 이상은 1월)</label>
@@ -177,8 +184,8 @@ footer{max-width:1180px;margin:0 auto;padding:4px 16px 30px;color:var(--sub);fon
 <footer><div style="font-size:13.5px;color:var(--ink);margin-bottom:6px">제작: 구미초 교감 이희명 · 문의 <a href="mailto:gyo6@kakao.com">gyo6@kakao.com</a></div>입력한 개인정보는 이 브라우저 안에서만 계산되며 저장·전송하지 않습니다(AI 인식을 켠 경우 이미지만 Google Gemini로 전송). 원본 엑셀 호봉획정표(정광선 님 제작)의 계산 방식을 웹으로 옮겼습니다. · <a href="../">계약제교원 채용 도우미로</a></footer>
 
 <div id="printArea"></div>
-<script src="engine.js?v=4"></script>
-<script src="ocr.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="engine.js?v=5"></script>
+<script src="ocr.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

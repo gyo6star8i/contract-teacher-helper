@@ -63,7 +63,7 @@
   };
 
   /* ---------- 입력 저장/불러오기 (파일로만, 브라우저 저장 안 함) ---------- */
-  const formIds = ['reason', 'date', 'org', 'name', 'cert', 'pos', 'curGrade', 'edu', 'sabeom', 'special', 'sabeomShort', 'extraAdj', 'limit14', 'pre97'];
+  const formIds = ['reason', 'date', 'org', 'name', 'cert', 'pos', 'curGrade', 'edu', 'sabeom', 'special', 'sabeomShort', 'extraAdj', 'limit14', 'pre97', 'wPos', 'wName', 'cPos', 'cName'];
   $('#exportJson').onclick = () => {
     const data = { v: 1, form: Object.fromEntries(formIds.map(id => [id, $('#' + id).type === 'checkbox' ? $('#' + id).checked : $('#' + id).value])), rows };
     const a = document.createElement('a');
@@ -138,8 +138,8 @@
     <table class="pf" style="margin-top:6px"><tr><th>(14) 환산 총경력년수</th><th>(15) 가감년수</th><th>(16) 호봉획정 경력년수</th><th>(17) 사정호봉</th><th>호봉획정(승급)일</th><th>(18) 사정호봉에 요하는 경력년수</th></tr>
     <tr><td class="c">${H.fmt(r.p14)}</td><td class="c">${r.adj}년</td><td class="c">${r.years}년 ${r.rest.m}월 ${r.rest.d}일</td><td class="c"><b>${esc(r.gradeText)}</b></td><td class="c">${H.kdate(r.at)}</td><td class="c">${r.grade - r.base}년</td></tr></table>
     <table class="pf" style="margin-top:6px"><tr><th style="width:18%">잔여월수</th><td>${r.rest.m}월 ${r.rest.d}일</td><th style="width:18%">차기승급일</th><td>${esc(nextTxt)}</td></tr>
-    <tr><th>작성자 직위(급)</th><td></td><th>성명</th><td style="height:34px">(인)</td></tr>
-    <tr><th>확인자 직위(급)</th><td></td><th>성명</th><td style="height:34px">(인)</td></tr></table>
+    <tr><th>작성자 직위(급)</th><td>${esc($('#wPos').value)}</td><th>성명</th><td style="height:34px">${esc($('#wName').value)} <span style="float:right">(인)</span></td></tr>
+    <tr><th>확인자 직위(급)</th><td>${esc($('#cPos').value)}</td><th>성명</th><td style="height:34px">${esc($('#cName').value)} <span style="float:right">(인)</span></td></tr></table>
     <p style="font-size:8.5pt;margin-top:6px">근거: 공무원보수규정 제8조·별표22·23·25, 교육공무원 호봉획정시 경력환산율표의 적용 등에 관한 예규 · 경력기간 1년=12월, 1월=30일 환산, 일 미만 버림</p>`;
   }
   $('#print').onclick = () => window.print();
