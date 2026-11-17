@@ -64,8 +64,25 @@
 
   /* ---------- 입력 저장/불러오기 (파일로만, 브라우저 저장 안 함) ---------- */
   const formIds = ['reason', 'date', 'org', 'name', 'cert', 'pos', 'curGrade', 'edu', 'sabeom', 'special', 'sabeomShort', 'extraAdj', 'limit14', 'pre97', 'wPos', 'wName', 'cPos', 'cName'];
+  const getState = () => ({ v: 1, form: Object.fromEntries(formIds.map(id => [id, $('#' + id).type === 'checkbox' ? $('#' + id).checked : $('#' + id).value])), rows });
+  function applyState(d) {
+    formIds.forEach(id => { if (d.form && id in d.form) { const el = $('#' + id); if (el.type === 'checkbox') el.checked = !!d.form[id]; else el.value = d.form[id]; } });
+    rows = (d.rows || []).map(r => ({ ...blank(), ...r })); syncSpecial(); renderRows();
+  }
+  $('#saveXlsx').onclick = async () => {
+    if (!last) return;
+    const cert = H.CERT[+$('#cert').value];
+    const eduName = (H.EDU.find(e => e[1] === +$('#edu').value) || [''])[0];
+    const info = { reason: $('#reason').value, org: $('#org').value, name: $('#name').value, certName: cert[0], pos: $('#pos').value, curGrade: $('#curGrade').value,
+      eduText: eduName + ($('#special').checked ? ' (특수)' : ''), sabeom: $('#sabeom').checked, writerPos: $('#wPos').value, writerName: $('#wName').value,
+      checkerPos: $('#cPos').value, checkerName: $('#cName').value, contract: $('#reason').value === '계약제 교원 임용' };
+    try {
+      const blob = await window.HobongXlsx.exportXlsx(info, last, getState());
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileBase() + '.xlsx'; a.click();
+    } catch (e) { alert('엑셀 저장 실패: ' + e.message); }
+  };
   $('#exportJson').onclick = () => {
-    const data = { v: 1, form: Object.fromEntries(formIds.map(id => [id, $('#' + id).type === 'checkbox' ? $('#' + id).checked : $('#' + id).value])), rows };
+    const data = getState();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
     a.download = fileBase() + '.json'; a.click();
@@ -74,9 +91,13 @@
   $('#importJson').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
     try {
-      const d = JSON.parse(await f.text());
-      formIds.forEach(id => { if (d.form && id in d.form) { const el = $('#' + id); if (el.type === 'checkbox') el.checked = !!d.form[id]; else el.value = d.form[id]; } });
-      rows = (d.rows || []).map(r => ({ ...blank(), ...r })); syncSpecial(); renderRows();
+      if (/\.json$/i.test(f.name)) applyState(JSON.parse(await f.text()));
+      else {
+        const res = await window.HobongXlsx.importXlsx(await f.arrayBuffer());
+        applyState(res.state);
+        $('#status').textContent = '';
+        alert(res.type === 'own' ? '저장했던 호봉획정표를 그대로 불러왔습니다.' : `기존 호봉획정표에서 기본 정보와 경력 ${res.state.rows.length}건을 불러왔습니다.\n경력 구분·환산율·학력을 한 번 확인하세요.`);
+      }
     } catch (err) { alert('불러오기 실패: ' + err.message); }
     e.target.value = '';
   };

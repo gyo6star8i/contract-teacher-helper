@@ -155,7 +155,7 @@ footer{max-width:1180px;margin:0 auto;padding:4px 16px 30px;color:var(--sub);fon
     <button class="ghost" id="addGrad" type="button">+ 대학원(석사 2년)</button>
     <button class="ghost" id="sample" type="button">예시 불러오기</button>
     <button class="ghost" id="exportJson" type="button">입력 내용 저장(.json)</button>
-    <button class="ghost" id="importJsonBtn" type="button">불러오기</button><input type="file" id="importJson" accept=".json" hidden>
+    <button class="ghost" id="importJsonBtn" type="button">기존 호봉획정표 불러오기(.xlsx·.xlsm·.json)</button><input type="file" id="importJson" accept=".json,.xlsx,.xlsm" hidden>
     <button class="del" id="clearAll" type="button">모두 지우기</button>
   </div>
   <p class="hint">· 강사는 "주당 실근무시간" 또는 "총 근무시간" 중 하나를 넣으면 학년도별 기준(~2004 44h, 2005 43h, 2006~2011 42h, 2012~ 40h)으로 환산합니다. 주 12시간 이하·불명확은 30%.<br>· 교원·유사경력 중 통상 근무시간보다 짧게 근무한 경우 주당 시간을 넣으면 40시간 비례(주 15시간 미만 불인정, 별표22 비고4).<br>· 기간이 겹치면 같은 날은 환산율이 높은 경력 하나만 인정합니다.</p>
@@ -165,7 +165,7 @@ footer{max-width:1180px;margin:0 auto;padding:4px 16px 30px;color:var(--sub);fon
   <h2><span class="n">4</span>획정 결과</h2>
   <div class="big" id="big"></div>
   <div id="msgs"></div>
-  <div class="row" style="margin-top:10px"><button id="print" type="button">호봉획정표 인쇄 / PDF 저장</button><button class="ghost" id="copy" type="button">결과 복사</button></div>
+  <div class="row" style="margin-top:10px"><button id="print" type="button">호봉획정표 인쇄 / PDF 저장</button><button id="saveXlsx" type="button">엑셀(.xlsx) 저장</button><button class="ghost" id="copy" type="button">결과 복사</button></div>
 </section>
 
 <section class="card">
@@ -184,8 +184,10 @@ footer{max-width:1180px;margin:0 auto;padding:4px 16px 30px;color:var(--sub);fon
 <footer><div style="font-size:13.5px;color:var(--ink);margin-bottom:6px">제작: 구미초 교감 이희명 · 문의 <a href="mailto:gyo6@kakao.com">gyo6@kakao.com</a></div>입력한 개인정보는 이 브라우저 안에서만 계산되며 저장·전송하지 않습니다(AI 인식을 켠 경우 이미지만 Google Gemini로 전송). 원본 엑셀 호봉획정표(정광선 님 제작)의 계산 방식을 웹으로 옮겼습니다. · <a href="../">계약제교원 채용 도우미로</a></footer>
 
 <div id="printArea"></div>
-<script src="engine.js?v=6"></script>
-<script src="ocr.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="../vendor/jszip.min.js"></script>
+<script src="engine.js?v=7"></script>
+<script src="ocr.js?v=7"></script>
+<script src="xlsx.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
