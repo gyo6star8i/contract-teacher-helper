@@ -143,14 +143,14 @@
     const pad = Math.max(0, 12 - r.valid.length);
     $('#printArea').innerHTML = `<h1 class="ptitle">호 봉 획 정 표</h1>
     <table class="pf"><tr><th style="width:18%">호봉획정사유</th><td colspan="3">${esc($('#reason').value)}</td></tr>
-    <tr><th>(1) 소속</th><td>${esc($('#org').value)}</td><th style="width:18%">(2) 제청(내신)자격</th><td>${esc(cert[0])}</td></tr>
+    <tr><th>(1) 소속</th><td>${esc($('#org').value)}</td><th style="width:18%">(2) 제청<br>(내신)자격</th><td>${esc(cert[0])}</td></tr>
     <tr><th>(4) 성명</th><td>${esc($('#name').value)}</td><th>(3) 현직위(급)</th><td>${esc($('#pos').value)}</td></tr>
     <tr><th>(5) 학력</th><td>${esc(eduName)}${inp.sabeom ? ' · 사범계' : ' · 비사범계'}${inp.special ? ' · 특수' : ''}</td><th>(6) 현호봉</th><td>${esc($('#curGrade').value)}</td></tr></table>
     <table class="pf" style="margin-top:6px"><tr><th colspan="2">(7) 경력기간</th><th rowspan="2">(8) 경력내용</th><th colspan="3">(9) 경력년수</th><th rowspan="2">(10)<br>환산율</th><th colspan="3">(11) 환산년수</th><th rowspan="2">(12) 비고</th></tr>
     <tr><th>부터</th><th>까지</th><th>년</th><th>월</th><th>일</th><th>년</th><th>월</th><th>일</th></tr>
     ${trs}${'<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'.repeat(pad)}
     <tr><th colspan="3">(13) 계</th><td class="c">${r.p13.y}</td><td class="c">${r.p13.m}</td><td class="c">${r.p13.d}</td><td></td><td class="c">${r.p14.y}</td><td class="c">${r.p14.m}</td><td class="c">${r.p14.d}</td><td></td></tr></table>
-    <table class="pf" style="margin-top:6px"><tr><th>(14) 환산 총경력년수</th><th>(15) 가감년수</th><th>(16) 호봉획정 경력년수</th><th>(17) 사정호봉</th><th>호봉획정(승급)일</th><th>(18) 사정호봉에 요하는 경력년수</th></tr>
+    <table class="pf" style="margin-top:6px"><tr><th>(14) 환산<br>총경력년수</th><th>(15) 가감<br>년수</th><th>(16) 호봉획정<br>경력년수</th><th>(17)<br>사정호봉</th><th>호봉획정<br>(승급)일</th><th>(18) 사정호봉에<br>요하는 경력년수</th></tr>
     <tr><td class="c">${H.fmt(r.p14)}</td><td class="c">${r.adj}년</td><td class="c">${r.years}년 ${r.rest.m}월 ${r.rest.d}일</td><td class="c"><b>${esc(r.gradeText)}</b></td><td class="c">${H.kdate(r.at)}</td><td class="c">${r.grade - r.base}년</td></tr></table>
     <table class="pf" style="margin-top:6px"><tr><th style="width:18%">잔여월수</th><td>${r.rest.m}월 ${r.rest.d}일</td><th style="width:18%">차기승급일</th><td>${esc(nextTxt)}</td></tr>
     <tr><th>작성자 직위(급)</th><td>${esc($('#wPos').value)}</td><th>성명</th><td style="height:34px">${esc($('#wName').value)} <span style="float:right">(인)</span></td></tr>

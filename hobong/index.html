@@ -7,7 +7,7 @@
 <style>
 :root{--ink:#1d2433;--sub:#5b6475;--line:#d8dde6;--bg:#f5f7fa;--card:#fff;--pri:#1f5fbf;--pri2:#e8f0fc;--ok:#1b7f4b;--okbg:#e7f5ed;--warn:#a65c00;--warnbg:#fff3e0;--bad:#b42318}
 *{box-sizing:border-box}
-body{margin:0;font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:var(--ink);background:var(--bg);font-size:15px;line-height:1.55}
+body{word-break:keep-all;margin:0;font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:var(--ink);background:var(--bg);font-size:15px;line-height:1.55}
 header{background:#14325f;color:#fff;padding:18px 20px}
 header h1{margin:0;font-size:21px}
 header p{margin:4px 0 0;opacity:.85;font-size:13.5px}
@@ -64,7 +64,7 @@ footer{max-width:1180px;margin:0 auto;padding:4px 16px 30px;color:var(--sub);fon
   @page{size:A4;margin:14mm}
 }
 .pf{width:100%;border-collapse:collapse;font-size:10.5pt}
-.pf td,.pf th{border:1px solid #000;padding:3px 5px}
+.pf td,.pf th{border:1px solid #000;padding:3px 5px;word-break:keep-all;overflow-wrap:break-word}
 .pf th{background:#f0f0f0;font-weight:600}
 .pf .c{text-align:center}
 .ptitle{text-align:center;font-size:18pt;letter-spacing:8px;margin:0 0 8px}
@@ -185,9 +185,9 @@ footer{max-width:1180px;margin:0 auto;padding:4px 16px 30px;color:var(--sub);fon
 
 <div id="printArea"></div>
 <script src="../vendor/jszip.min.js"></script>
-<script src="engine.js?v=10"></script>
-<script src="ocr.js?v=10"></script>
-<script src="xlsx.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="engine.js?v=11"></script>
+<script src="ocr.js?v=11"></script>
+<script src="xlsx.js?v=11"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>
