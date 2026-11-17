@@ -68,7 +68,7 @@
     const data = { v: 1, form: Object.fromEntries(formIds.map(id => [id, $('#' + id).type === 'checkbox' ? $('#' + id).checked : $('#' + id).value])), rows };
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
-    a.download = `호봉획정_${$('#name').value || '입력'}.json`; a.click();
+    a.download = fileBase() + '.json'; a.click();
   };
   $('#importJsonBtn').onclick = () => $('#importJson').click();
   $('#importJson').onchange = async e => {
@@ -142,7 +142,19 @@
     <tr><th>확인자 직위(급)</th><td>${esc($('#cPos').value)}</td><th>성명</th><td style="height:34px">${esc($('#cName').value)} <span style="float:right">(인)</span></td></tr></table>
     <p style="font-size:8.5pt;margin-top:6px">근거: 공무원보수규정 제8조·별표22·23·25, 교육공무원 호봉획정시 경력환산율표의 적용 등에 관한 예규 · 경력기간 1년=12월, 1월=30일 환산, 일 미만 버림</p>`;
   }
-  $('#print').onclick = () => window.print();
+  // 파일명: 학교명(줄임)-성명, 예) 구미초-홍길동
+  function fileBase() {
+    const org = $('#org').value.replace(/\s+/g, '').replace(/초등학교$/, '초').replace(/중학교$/, '중').replace(/고등학교$/, '고').replace(/유치원$/, '유');
+    const nm = $('#name').value.trim();
+    return ([org, nm].filter(Boolean).join('-') || '호봉획정표').replace(/[\\/:*?"<>|]/g, '');
+  }
+  $('#print').onclick = () => {
+    const t = document.title;
+    document.title = fileBase();          // 'PDF로 저장' 기본 파일명
+    window.addEventListener('afterprint', () => { document.title = t; }, { once: true });
+    window.print();
+    setTimeout(() => { document.title = t; }, 3000);
+  };
   $('#copy').onclick = async () => {
     if (!last) return;
     const t = [`사정호봉 ${last.gradeText} (기산 ${last.base} + 경력 ${last.years}년), 잔여 ${last.rest.m}월 ${last.rest.d}일, 차기승급일 ${last.next ? H.kdate(last.next) : '-'}`,
@@ -167,6 +179,18 @@
   ['dragleave', 'drop'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.remove('on'); }));
   $('#drop').addEventListener('drop', e => addFiles(e.dataTransfer.files));
   document.addEventListener('paste', e => {
+    // 엑셀·한글에서 복사한 호봉획정표 경력 부분(글자) → 바로 후보로
+    const tag = (e.target && e.target.tagName) || '';
+    const txt = (e.clipboardData && e.clipboardData.getData('text/plain')) || '';
+    const tbl = tag === 'INPUT' || tag === 'TEXTAREA' ? [] : O.parseTable(txt);
+    if (tbl.length) {
+      e.preventDefault();
+      cands = tbl.map(c => ({ ...blank(), ...c }));
+      showCands();
+      $('#status').textContent = `복사한 표에서 경력 ${tbl.length}건을 읽었습니다(AI 사용 안 함). 확인 후 추가하세요.`;
+      $('#candWrap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     const fs = [...(e.clipboardData || {}).items || []].filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean);
     if (fs.length) { e.preventDefault(); addFiles(fs.map((f, k) => new File([f], `붙여넣기${images.length + k + 1}.png`, { type: f.type || 'image/png' }))); $('#status').textContent = `캡처 ${fs.length}장을 붙여 넣었습니다.`; }
   });
@@ -191,7 +215,7 @@
       let res;
       if (mode === 'ai') { rememberKey(); res = await O.gemini(images, $('#apiKey').value.trim(), $('#model').value.trim(), s => { $('#status').textContent = s; }); }
       else { const t = await O.tesseract(images, s => { $('#status').textContent = 'OCR: ' + s; }); res = t.rows; if (!res.length) $('#status').textContent = '날짜 기간을 찾지 못했습니다. 인식된 글자:\n' + t.text.slice(0, 600); }
-      cands = res.map(c => ({ ...blank(), ...c, rate: '' }));
+      cands = res.map(c => ({ ...blank(), ...c }));
       showCands();
       if (res.length) $('#status').textContent = `경력 ${res.length}건을 찾았습니다. 날짜·구분을 확인하고 추가하세요.`;
     } catch (e) { $('#status').textContent = '오류: ' + e.message + (mode === 'ai' ? '\n(키·모델명을 확인하거나 "브라우저 OCR"을 써 보세요.)' : ''); }
@@ -199,8 +223,8 @@
   };
   function showCands() {
     $('#candWrap').style.display = cands.length ? '' : 'none';
-    $('#cand').innerHTML = '<tr><th></th><th>부터</th><th>까지</th><th>경력내용</th><th>추정 구분</th><th>주당/총 시간</th><th>비고</th></tr>' +
-      cands.map((c, i) => `<tr><td><input type="checkbox" data-ci="${i}" checked></td><td>${esc(c.start)}</td><td>${esc(c.end) || '<b style="color:var(--bad)">비어 있음</b>'}</td><td>${esc(c.content)}</td><td>${esc((H.KIND[c.kind] || {}).label)}</td><td>${esc([c.weekly, c.totalHours].filter(Boolean).join(' / '))}</td><td>${esc(c.note)}</td></tr>`).join('');
+    $('#cand').innerHTML = '<tr><th></th><th>부터</th><th>까지</th><th>경력내용</th><th>추정 구분</th><th>환산율</th><th>주당/총 시간</th><th>비고</th></tr>' +
+      cands.map((c, i) => `<tr><td><input type="checkbox" data-ci="${i}" checked></td><td>${esc(c.start)}</td><td>${esc(c.end) || '<b style="color:var(--bad)">비어 있음</b>'}</td><td>${esc(c.content)}</td><td>${esc((H.KIND[c.kind] || {}).label)}</td><td>${c.rate !== '' && c.rate != null ? esc(c.rate) + '%' : ''}</td><td>${esc([c.weekly, c.totalHours].filter(Boolean).join(' / '))}</td><td>${esc(c.note)}</td></tr>`).join('');
   }
   $('#addCand').onclick = () => {
     const sel = [...document.querySelectorAll('#cand input[data-ci]')].filter(x => x.checked).map(x => cands[+x.dataset.ci]);
@@ -209,6 +233,13 @@
       const ends = sel.map(c => c.end).filter(Boolean).sort();
       if (ends.length) $('#date').value = H.iso(H.addDays(H.D(ends[ends.length - 1]), 1));
     }
+    sel.forEach(c => {
+      if (c.rate === '' || c.rate == null) return;
+      if (c.kind === 'gangsa' || c.kind === 'univ') { c.kind = 'custom'; c.note = [c.note, '호봉획정표 환산율 그대로'].filter(Boolean).join(' '); }
+      const def = (H.KIND[c.kind] || {}).rate;
+      if (def != null && Number(c.rate) === def) c.rate = '';
+      else if (def != null) { c.kind = 'custom'; }
+    });
     rows = rows.concat(sel.map(c => ({ ...c, end: c.end || $('#date').value ? (c.end || H.iso(H.addDays(H.D($('#date').value), -1))) : '' })))
       .sort((a, b) => String(a.start).localeCompare(String(b.start)));
     $('#candWrap').style.display = 'none';

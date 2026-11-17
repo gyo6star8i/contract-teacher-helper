@@ -37,9 +37,10 @@
   }
 
   /* ---------- 1) Gemini ---------- */
-  const PROMPT = `이 이미지는 한국의 경력증명서(또는 인사기록카드·병적증명서) 캡처입니다.
+  const PROMPT = `이 이미지는 한국의 경력증명서, 인사기록카드, 병적증명서 또는 기존 호봉획정표(경력기간·경력내용·환산율 표) 캡처입니다.
 호봉획정에 필요한 "근무 경력 기간"을 모두 찾아 JSON 배열로만 답하세요.
-각 항목: {"start":"YYYY-MM-DD","end":"YYYY-MM-DD","org":"근무기관(학교명 등)","position":"직위·직종·담당(예: 기간제교사, 시간강사, 교사, 일병 등)","category":"교원|기간제교원|시간강사|군복무|공무원|휴직|대학원|회사|학원|기타","weeklyHours":숫자 또는 null,"totalHours":숫자 또는 null,"note":"휴직 종류·전공 불일치·미보고 등 특이사항, 없으면 빈 문자열"}
+각 항목: {"start":"YYYY-MM-DD","end":"YYYY-MM-DD","org":"근무기관(학교명 등)","position":"직위·직종·담당(예: 기간제교사, 시간강사, 교사, 일병 등)","category":"교원|기간제교원|시간강사|군복무|공무원|휴직|대학원|회사|학원|기타","weeklyHours":숫자 또는 null,"totalHours":숫자 또는 null,"rate":호봉획정표에 적힌 환산율(퍼센트 숫자, 예: 100, 80, 50) 또는 null,"note":"휴직 종류·전공 불일치·미보고 등 특이사항(호봉획정표의 비고 포함), 없으면 빈 문자열"}
+- 호봉획정표라면 (7)경력기간의 부터·까지, (8)경력내용, (10)환산율, (12)비고를 행마다 그대로 옮기고, (13)계 이하 합계 줄은 빼세요.
 규칙:
 - 날짜는 반드시 서기 YYYY-MM-DD. "현재", "재직중"이면 end는 빈 문자열.
 - 한 행에 여러 기간이 있으면 각각 나누어 적으세요. 휴직 기간이 별도로 적혀 있으면 별도 항목(category "휴직")으로 넣으세요.
@@ -85,7 +86,8 @@
         : cat === '대학원' ? 'grad' : cat === '회사' ? 'company' : cat === '학원' ? 'academy' : cat === '공무원' ? 'gov'
         : cat === '교원' || cat === '기간제교원' ? 'teacher' : classify(content + ' ' + (a.note || ''));
       if (kind === 'teacher' && /불일치|자격.*다름|미보고/.test(a.note || '')) kind = /미보고/.test(a.note) ? 'privNoReport' : 'teacher80';
-      return { start: a.start || '', end: a.end || '', content, kind, weekly: a.weeklyHours || '', totalHours: a.totalHours || '', note: a.note || '' };
+      const rate = a.rate != null && a.rate !== '' ? Number(String(a.rate).replace(/[^\d.]/g, '')) : '';
+      return { start: a.start || '', end: a.end || '', content, kind, rate: rate === '' || isNaN(rate) ? '' : (rate <= 1 && rate > 0 ? rate * 100 : rate), weekly: a.weeklyHours || '', totalHours: a.totalHours || '', note: a.note || '' };
     });
   }
 
@@ -150,5 +152,30 @@
     return out;
   }
 
-  root.Ocr = { gemini, tesseract, parseText, classify };
+  /* 엑셀·한글에서 복사한 표(탭 구분 글자) → 경력 행
+   * 기존 호봉획정표의 경력 부분을 복사해 붙여 넣는 경우: 부터·까지·경력내용·…·환산율·…·비고 */
+  function parseTable(text) {
+    const DT = /^\s*'?((?:19|20)\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})\s*[.일]?\s*$/;
+    const out = [];
+    String(text || '').split(/\r?\n/).forEach(line => {
+      if (!line.includes('\t')) return;
+      const cells = line.split('\t').map(c => c.trim());
+      const di = cells.map((c, i) => (DT.test(c) ? i : -1)).filter(i => i >= 0);
+      if (di.length < 2) return;
+      const d = i => { const m = cells[i].match(DT); return normDate(m[1], m[2], m[3]); };
+      const start = d(di[0]), end = d(di[1]);
+      if (!start || !end || end < start) return;
+      const after = cells.slice(di[1] + 1);
+      const content = after.find(c => c && !/^[\d.\s%]+$/.test(c)) || '';
+      const pc = after.find(c => /^\d{1,3}(\.\d+)?\s*%$/.test(c));
+      let rate = pc ? Number(pc.replace('%', '')) : '';
+      if (rate === '') { const dec = after.find(c => /^(0?\.\d+|1)$/.test(c)); if (dec) rate = Number(dec) * 100; }
+      const ci = after.indexOf(content);
+      const tail = after.slice(ci + 1).filter(c => c && !/^[\d.\s%]+$/.test(c));
+      out.push({ start, end, content, kind: classify(content + ' ' + tail.join(' ')), rate, weekly: '', totalHours: '', note: tail.join(' ').slice(0, 60) });
+    });
+    return out;
+  }
+
+  root.Ocr = { gemini, tesseract, parseText, parseTable, classify };
 })(typeof self !== 'undefined' ? self : this);
