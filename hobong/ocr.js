@@ -59,7 +59,7 @@
     let j = null, lastErr = '';
     outer:
     for (const m of models) {
-      for (let t = 0; t < 3; t++) {
+      for (let t = 0; t < 2; t++) {
         onStatus && onStatus(`${m} 모델로 인식 중…${t ? ` (재시도 ${t})` : ''}`);
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body,
@@ -69,7 +69,7 @@
         lastErr = `${m}: ${res.status} ${(data.error && data.error.message) || ''}`;
         if (res.status === 400 || res.status === 401 || res.status === 403) throw new Error(`Gemini 오류(${res.status}): ${(data.error && data.error.message) || ''}\n키가 올바른지 확인하세요.`);
         if (res.status === 404) break;                       // 없는 모델 → 다음 모델
-        if ([429, 500, 502, 503, 504, 0].includes(res.status)) { await sleep(t === 0 ? 2000 : 5000); continue; }
+        if ([429, 500, 502, 503, 504, 0].includes(res.status)) { if (t === 0) { await sleep(1500); continue; } break; }
         break;
       }
     }
