@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>교육공무원 호봉획정 도우미</title>
+<style>
+:root{--ink:#1d2433;--sub:#5b6475;--line:#d8dde6;--bg:#f5f7fa;--card:#fff;--pri:#1f5fbf;--pri2:#e8f0fc;--ok:#1b7f4b;--okbg:#e7f5ed;--warn:#a65c00;--warnbg:#fff3e0;--bad:#b42318}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:var(--ink);background:var(--bg);font-size:15px;line-height:1.55}
+header{background:#14325f;color:#fff;padding:18px 20px}
+header h1{margin:0;font-size:21px}
+header p{margin:4px 0 0;opacity:.85;font-size:13.5px}
+main{max-width:1180px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:17px;display:flex;align-items:center;gap:8px}
+.card h2 .n{background:var(--pri);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-grid;place-items:center;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 14px}
+label.f{display:flex;flex-direction:column;font-size:13px;color:var(--sub);gap:3px}
+input,select,textarea{font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+input[type=checkbox]{width:auto}
+.chk{display:flex;align-items:center;gap:6px;font-size:14px}
+button{font:inherit;font-size:14px;border:1px solid var(--pri);background:var(--pri);color:#fff;border-radius:6px;padding:7px 14px;cursor:pointer}
+button.ghost{background:#fff;color:var(--pri)}
+button.sm{padding:3px 8px;font-size:13px}
+button.del{border-color:#e5b4ae;background:#fff;color:var(--bad)}
+button:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hint{font-size:12.5px;color:var(--sub)}
+table{border-collapse:collapse;width:100%}
+.tw{overflow-x:auto}
+#careers th,#careers td{border:1px solid var(--line);padding:4px 5px;font-size:13px;vertical-align:top}
+#careers th{background:#eef2f7;font-weight:600;white-space:nowrap}
+#careers input,#careers select{width:100%;font-size:13px;padding:4px 5px}
+#careers td.num{text-align:right;white-space:nowrap}
+#careers .x{font-size:11.5px;color:var(--sub);margin-top:2px}
+.drop{border:2px dashed #9db6dd;border-radius:10px;padding:18px;text-align:center;background:#f7faff;cursor:pointer}
+.drop.on{background:var(--pri2)}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.thumbs div{position:relative}
+.thumbs img{height:90px;border:1px solid var(--line);border-radius:6px}
+.thumbs button{position:absolute;top:2px;right:2px;padding:0 6px;font-size:12px}
+.msg{padding:7px 10px;border-radius:6px;margin:5px 0;font-size:14px}
+.msg.ok{background:var(--okbg);color:var(--ok)} .msg.warn{background:var(--warnbg);color:var(--warn)} .msg.info{background:#eef2f7;color:#334}
+.msg small{opacity:.75;margin-left:6px}
+.big{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:10px}
+.big div{background:#f2f6fc;border-radius:8px;padding:10px 12px}
+.big b{display:block;font-size:22px;color:#14325f}
+.big span{font-size:12.5px;color:var(--sub)}
+details{margin-top:6px} summary{cursor:pointer;color:var(--pri)}
+.law td,.law th{border:1px solid var(--line);padding:4px 8px;font-size:13px}
+.law th{background:#eef2f7}
+.cand td{font-size:13px;border-bottom:1px solid var(--line);padding:4px}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{background:#fff;color:var(--pri)} .tabs button.on{background:var(--pri);color:#fff}
+#status{font-size:13.5px;color:var(--sub);margin-top:6px;white-space:pre-wrap}
+footer{max-width:1180px;margin:0 auto;padding:4px 16px 30px;color:var(--sub);font-size:12.5px}
+/* 인쇄용 호봉획정표 */
+#printArea{display:none}
+@media print{
+  body{background:#fff;font-size:11pt}
+  header,main,footer{display:none!important}
+  #printArea{display:block}
+  @page{size:A4;margin:14mm}
+}
+.pf{width:100%;border-collapse:collapse;font-size:10.5pt}
+.pf td,.pf th{border:1px solid #000;padding:3px 5px}
+.pf th{background:#f0f0f0;font-weight:600}
+.pf .c{text-align:center}
+.ptitle{text-align:center;font-size:18pt;letter-spacing:8px;margin:0 0 8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>교육공무원 호봉획정 도우미</h1>
+  <p>공무원보수규정 [별표 22·23·25]와 교육부 「호봉획정 시 경력환산율표 적용 예규」 기준 · 경력증명서 캡처 자동 인식 · 호봉획정표 인쇄</p>
+</header>
+<main>
+
+<section class="card">
+  <h2><span class="n">1</span>기본 정보</h2>
+  <div class="grid">
+    <label class="f">호봉획정 사유
+      <select id="reason"><option>초임 호봉획정</option><option>호봉재획정</option><option>호봉정정</option><option>계약제 교원 임용</option></select></label>
+    <label class="f">호봉획정(승급)일 <input type="date" id="date"></label>
+    <label class="f">소속 <input id="org" placeholder="○○초등학교"></label>
+    <label class="f">성명 <input id="name" placeholder="홍길동"></label>
+    <label class="f">자격(기산호봉, 별표25) <select id="cert"></select></label>
+    <label class="f">현 직위(급) <input id="pos" placeholder="초등교사"></label>
+    <label class="f">현 호봉(재획정 시 참고) <input id="curGrade" type="number" min="1" max="40"></label>
+  </div>
+  <h3 style="font-size:15px;margin:14px 0 6px">학력 → (15) 가감년수 <span class="hint">[별표 23] (총수학연수 − 16) + 가산연수</span></h3>
+  <div class="grid">
+    <label class="f">최종학력(총수학연수) <select id="edu"></select></label>
+    <label class="chk"><input type="checkbox" id="sabeom" checked> 사범계 졸업(교대·사범대·교육과, 수학연한 2년 이상)</label>
+    <label class="chk"><input type="checkbox" id="special"> 특수학교·특수학급·특수교육지원센터 근무 + 특수학교 자격</label>
+    <label class="chk" id="shortWrap" style="display:none"><input type="checkbox" id="sabeomShort"> 사범계 교원양성기관(1년 이상 2년 미만) 수료</label>
+    <label class="f">추가 가감년수(특별승급·승급제한 등, 년) <input type="number" id="extraAdj" value="0" step="1"></label>
+  </div>
+  <div class="hint" id="eduWhy" style="margin-top:6px"></div>
+  <div class="grid" style="margin-top:10px">
+    <label class="chk"><input type="checkbox" id="limit14"> 호봉상한제 14호봉(퇴직연금 수령·명예·정년퇴직자 계약제 임용)</label>
+    <label class="chk"><input type="checkbox" id="pre97"> 1997. 1. 1. 이전 획정(잔여 15일 이상은 1월)</label>
+  </div>
+</section>
+
+<section class="card">
+  <h2><span class="n">2</span>경력증명서 캡처 인식 <span class="hint" style="font-weight:400">(선택)</span></h2>
+  <div class="drop" id="drop">
+    <b>여기를 눌러 이미지 선택</b> · 끌어다 놓기 · <b>Ctrl+V</b>로 캡처 붙여넣기<br>
+    <span class="hint">경력증명서·인사기록카드·병적증명서 화면 캡처(PNG·JPG) 또는 PDF. 여러 장 가능</span>
+    <input type="file" id="file" accept="image/*,application/pdf" multiple hidden>
+  </div>
+  <div class="thumbs" id="thumbs"></div>
+  <div class="tabs" style="margin-top:12px">
+    <button id="modeAI" class="on" type="button">AI 인식(Gemini) — 정확도 높음</button>
+    <button id="modeOCR" type="button">브라우저 OCR — 키 없이, 서버 전송 없음</button>
+  </div>
+  <div id="aiBox">
+    <div class="grid">
+      <label class="f">Gemini API 키 <input id="apiKey" type="password" placeholder="AIza…" autocomplete="off"></label>
+      <label class="f">모델 <input id="model" value="gemini-flash-latest" list="models"></label>
+      <datalist id="models"><option value="gemini-flash-latest"><option value="gemini-3.8-flash"><option value="gemini-3.5-flash-lite"><option value="gemini-pro-latest"></datalist>
+      <label class="chk"><input type="checkbox" id="saveKey"> 이 브라우저에 키 기억</label>
+    </div>
+    <p class="hint">키는 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>에서 무료로 발급합니다. 이미지는 이 브라우저에서 Google Gemini로 <b>직접</b> 전송되며 이 사이트 서버는 없습니다. <b>주민등록번호 등은 캡처 전에 가리거나 잘라 내세요.</b></p>
+  </div>
+  <div id="ocrBox" style="display:none">
+    <p class="hint">Tesseract.js(한국어)를 처음 한 번 내려받아 이 기기 안에서 글자를 읽습니다(수 MB). 표 형태가 복잡하면 날짜를 놓칠 수 있으니 결과를 꼭 확인하세요.</p>
+  </div>
+  <div class="row"><button id="runOcr" type="button" disabled>인식하기</button><button class="ghost" id="clearImgs" type="button">이미지 지우기</button></div>
+  <div id="status"></div>
+  <div id="candWrap" style="display:none;margin-top:10px">
+    <b>인식 결과 — 확인 후 추가하세요</b>
+    <div class="tw"><table class="cand" id="cand"></table></div>
+    <div class="row" style="margin-top:8px"><button id="addCand" type="button">선택한 경력 표에 추가</button></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2><span class="n">3</span>경력 입력 <span class="hint" style="font-weight:400">(7)~(12)</span></h2>
+  <div class="tw"><table id="careers">
+    <thead><tr><th style="width:118px">부터</th><th style="width:118px">까지</th><th style="min-width:150px">(8) 경력내용</th><th style="min-width:220px">경력 구분(별표22)</th><th style="width:82px">(10) 환산율%</th><th style="width:118px">근무시간<br><span class="hint">강사·단시간</span></th><th>(9) 경력년수</th><th>(11) 환산년수</th><th style="width:48px"></th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <div class="row" style="margin-top:8px">
+    <button id="addRow" type="button">+ 경력 추가</button>
+    <button class="ghost" id="addGrad" type="button">+ 대학원(석사 2년)</button>
+    <button class="ghost" id="sample" type="button">예시 불러오기</button>
+    <button class="ghost" id="exportJson" type="button">입력 내용 저장(.json)</button>
+    <button class="ghost" id="importJsonBtn" type="button">불러오기</button><input type="file" id="importJson" accept=".json" hidden>
+    <button class="del" id="clearAll" type="button">모두 지우기</button>
+  </div>
+  <p class="hint">· 강사는 "주당 실근무시간" 또는 "총 근무시간" 중 하나를 넣으면 학년도별 기준(~2004 44h, 2005 43h, 2006~2011 42h, 2012~ 40h)으로 환산합니다. 주 12시간 이하·불명확은 30%.<br>· 교원·유사경력 중 통상 근무시간보다 짧게 근무한 경우 주당 시간을 넣으면 40시간 비례(주 15시간 미만 불인정, 별표22 비고4).<br>· 기간이 겹치면 같은 날은 환산율이 높은 경력 하나만 인정합니다.</p>
+</section>
+
+<section class="card" id="resultCard">
+  <h2><span class="n">4</span>획정 결과</h2>
+  <div class="big" id="big"></div>
+  <div id="msgs"></div>
+  <div class="row" style="margin-top:10px"><button id="print" type="button">호봉획정표 인쇄 / PDF 저장</button><button class="ghost" id="copy" type="button">결과 복사</button></div>
+</section>
+
+<section class="card">
+  <h2><span class="n">i</span>계산 근거</h2>
+  <details open><summary>호봉 계산 공식</summary>
+    <p><b>사정호봉 = 기산호봉(별표25) + [환산 경력연수(별표22) + 가감년수(별표23)]의 년수</b>, 1년 미만은 잔여기간으로 차기승급에 산입합니다(공무원보수규정 제8조, 별표15).<br>
+    경력기간은 시작일·종료일을 모두 넣어 년·월·일로 세고(민법 제160조 방식), 환산할 때는 1년 = 12월, 1월 = 30일로 바꾸어 환산율을 곱한 뒤 1일 미만을 버립니다.<br>
+    차기승급일은 잔여기간에 획정일 이후 근무를 더해 1년이 되는 날이 속한 달의 다음 달 1일(그날이 1일이면 그날)입니다. 교원 봉급표 최고 호봉은 40호봉이며 초과분은 근속가봉입니다.</p></details>
+  <details><summary>[별표 25] 기산호봉표</summary><div id="lawCert"></div></details>
+  <details><summary>[별표 23] 총수학연수 가감 산정표</summary>
+    <p>(총수학연수 − 16) + 가산연수. 가산연수: 일반 교원 중 수학연한 2년 이상 사범계(교육계 학과 포함) 졸업 1년 / 특수학교·특수학급·특수교육지원센터 근무 교원 중 특수학교 자격 소지자는 사범계 2년, 1~2년 사범계 양성기관 수료 1년, 비사범계 1년. 공무원 등으로 근무한 기간 중 대학(통학 가능 야간대학 제외) 졸업은 학력으로 인정하지 않습니다. 같은 수준 학교를 2개 이상 졸업하면 1개 외의 수학연수는 80%(별표22 비고2) — 경력 표에 "직접 입력 80%"로 넣으세요.</p></details>
+  <details><summary>[별표 22] 경력환산율표(요약)</summary><div id="lawCareer"></div></details>
+  <p class="hint">출처: 공무원보수규정(대통령령, 2026. 9. 29. 공포본) 별표 22(2025. 1. 3. 개정)·23·25, 교육공무원 호봉획정시 경력환산율표의 적용 등에 관한 예규(교육부, 2025. 4. 23.). 참고용 도구이며 최종 판단은 원문과 교육(지원)청 인사 담당에 확인하세요.</p>
+</section>
+</main>
+<footer>입력한 개인정보는 이 브라우저 안에서만 계산되며 저장·전송하지 않습니다(AI 인식을 켠 경우 이미지만 Google Gemini로 전송). 원본 엑셀 호봉획정표(정광선 님 제작)의 계산 방식을 웹으로 옮겼습니다. · <a href="../">계약제교원 채용 도우미로</a></footer>
+
+<div id="printArea"></div>
+<script src="engine.js"></script>
+<script src="ocr.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
